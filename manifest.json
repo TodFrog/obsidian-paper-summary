@@ -1,0 +1,9 @@
+{
+  "id": "obsidian-paper-summary",
+  "name": "Paper Summary",
+  "version": "0.1.0",
+  "minAppVersion": "1.5.0",
+  "description": "Generate structured paper summary notes from PDFs in Obsidian.",
+  "author": "Codex",
+  "isDesktopOnly": true
+}
