@@ -21,6 +21,7 @@ export interface PaperSummarySettings {
   openRouterProviderOrder: string;
   openRouterAllowFallbacks: boolean;
   outputFolder: string;
+  paperNotesScope: string;
   maxPages: number;
   maxChars: number;
   openAfterCreate: boolean;
@@ -45,6 +46,7 @@ export const DEFAULT_SETTINGS: PaperSummarySettings = {
   openRouterProviderOrder: "",
   openRouterAllowFallbacks: true,
   outputFolder: "Papers/Summaries",
+  paperNotesScope: "Papers/Summaries",
   maxPages: 20,
   maxChars: 60000,
   openAfterCreate: true,
@@ -63,6 +65,10 @@ export function mergeSettings(
 
   if (merged.provider === "openrouter" && !merged.baseUrl.trim()) {
     merged.baseUrl = OPENROUTER_BASE_URL;
+  }
+
+  if (!loadedData || typeof loadedData.paperNotesScope !== "string" || !loadedData.paperNotesScope.trim()) {
+    merged.paperNotesScope = merged.outputFolder;
   }
 
   return merged;

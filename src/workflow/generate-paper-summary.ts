@@ -1,5 +1,6 @@
 import { App, TFile } from "obsidian";
 import type { RelatedPaperContext } from "../related/related-notes";
+import { extractKeywordTerms } from "../related/related-notes";
 import type { PaperSummarySettings } from "../settings";
 import { analyzePaper } from "../llm/paper-analysis";
 import { createOpenAiJsonCompletionClient } from "../llm/openai-json-client";
@@ -55,14 +56,26 @@ export async function generatePaperSummary(params: {
     tags: [params.settings.paperTag, ...analysis.tags],
     authors: analysis.authors,
     year: analysis.year,
+    venue: analysis.venue,
+    keywordTerms: extractKeywordTerms([
+      analysis.oneSentenceSummary,
+      ...analysis.keyContributions,
+      analysis.problemStatement,
+      analysis.proposedMethod,
+      ...analysis.proposedMethodDetails,
+      ...analysis.results,
+      ...analysis.limitations,
+    ].join(" ")),
   };
 
   params.onProgress?.("Finding related notes...");
-  const relatedLinks = suggestRelatedNoteLinks({
+  const relatedLinks = await suggestRelatedNoteLinks({
     current: relatedContext,
     files: params.app.vault.getMarkdownFiles(),
+    vault: params.app.vault,
     metadataCache: params.app.metadataCache,
     paperTag: params.settings.paperTag,
+    scope: params.settings.paperNotesScope,
     limit: params.settings.relatedNotesLimit,
   });
 

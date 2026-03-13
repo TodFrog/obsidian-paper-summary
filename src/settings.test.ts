@@ -10,6 +10,7 @@ describe("settings", () => {
     ).toEqual({
       ...DEFAULT_SETTINGS,
       outputFolder: "Custom/Papers",
+      paperNotesScope: "Custom/Papers",
       relatedNotesLimit: 3,
     });
   });
@@ -54,6 +55,17 @@ describe("settings", () => {
     ).toMatchObject({
       templateMode: "built_in",
       customTemplatePath: "",
+    });
+  });
+
+  it("defaults the paper-notes scope to the output folder for upgraded users", () => {
+    expect(
+      mergeSettings({
+        outputFolder: "Custom/Papers",
+      }),
+    ).toMatchObject({
+      outputFolder: "Custom/Papers",
+      paperNotesScope: "Custom/Papers",
     });
   });
 });

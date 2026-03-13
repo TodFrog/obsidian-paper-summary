@@ -3,6 +3,7 @@ import { PaperSummaryError } from "./errors";
 import { mergeSettings, type PaperSummarySettings } from "./settings";
 import { PaperSummarySettingTab } from "./settings-tab";
 import { generatePaperSummary } from "./workflow/generate-paper-summary";
+import { refreshRelatedPaperLinks } from "./workflow/refresh-related-paper-links";
 
 export default class PaperSummaryPlugin extends Plugin {
   settings: PaperSummarySettings = mergeSettings();
@@ -16,6 +17,14 @@ export default class PaperSummaryPlugin extends Plugin {
       name: "Summarize active PDF",
       callback: async () => {
         await this.summarizeFile(this.app.workspace.getActiveFile());
+      },
+    });
+
+    this.addCommand({
+      id: "refresh-related-paper-links",
+      name: "Refresh related paper links",
+      callback: async () => {
+        await this.refreshActivePaperLinks(this.app.workspace.getActiveFile());
       },
     });
 
@@ -82,6 +91,41 @@ export default class PaperSummaryPlugin extends Plugin {
       }
 
       console.error("Paper Summary failed", error);
+      new Notice(`Paper Summary failed: ${error instanceof Error ? error.message : String(error)}`, 6000);
+    }
+  }
+
+  private async refreshActivePaperLinks(file: TFile | null): Promise<void> {
+    if (!file || file.extension.toLowerCase() !== "md") {
+      new Notice("Open a built-in paper summary note first.");
+      return;
+    }
+
+    try {
+      const result = await refreshRelatedPaperLinks({
+        app: this.app,
+        file,
+        settings: {
+          outputFolder: this.settings.outputFolder,
+          paperNotesScope: this.settings.paperNotesScope,
+          paperTag: this.settings.paperTag,
+          relatedNotesLimit: this.settings.relatedNotesLimit,
+        },
+        onNotice: (message) => {
+          new Notice(message, 4000);
+        },
+      });
+
+      if (!result.updated) {
+        return;
+      }
+
+      new Notice(
+        `Refreshed related paper links with ${result.relatedCount} suggestion${result.relatedCount === 1 ? "" : "s"}.`,
+        5000,
+      );
+    } catch (error) {
+      console.error("Paper Summary failed to refresh related paper links", error);
       new Notice(`Paper Summary failed: ${error instanceof Error ? error.message : String(error)}`, 6000);
     }
   }

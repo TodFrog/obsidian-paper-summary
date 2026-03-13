@@ -52,6 +52,16 @@ Notes:
 - `OpenRouter require parameters` helps prefer routes that honor structured-output parameters.
 - Custom templates are optional; the built-in template is still the stable default.
 - If a target note name already exists, the plugin creates a unique file name with a numeric suffix.
+- `Paper notes scope` controls which vault folder is scanned for existing paper summaries when computing related paper links.
+- `Refresh related paper links` only rewrites the built-in `Related Notes` section and leaves custom-template notes untouched.
+
+## Local related-paper linking
+
+- Related-paper suggestions stay local-only and deterministic.
+- The scorer combines tag overlap, title-token overlap, author overlap, venue/year signals, and keyword overlap from built-in summary sections.
+- Generation-time linking inserts `[[Note Title]]` bullets for the top-ranked existing papers inside the related-notes section.
+- Refresh is one-way in v1: it updates the active built-in paper summary note only and does not edit older notes automatically.
+- Notes inside the configured paper-notes scope can still contribute metadata-only matches even if they do not use the built-in template, but built-in notes get stronger keyword-based scoring.
 
 ## Optional development commands
 

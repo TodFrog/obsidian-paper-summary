@@ -228,6 +228,19 @@ export class PaperSummarySettingTab extends PluginSettingTab {
       );
 
     new Setting(containerEl)
+      .setName("Paper notes scope")
+      .setDesc("Vault-relative folder scanned for existing paper summary notes when generating or refreshing related paper links. Defaults to the output folder.")
+      .addText((text) =>
+        text
+          .setPlaceholder(this.plugin.settings.outputFolder || "Papers/Summaries")
+          .setValue(this.plugin.settings.paperNotesScope)
+          .onChange(async (value) => {
+            this.plugin.settings.paperNotesScope = value.trim() || this.plugin.settings.outputFolder;
+            await this.plugin.saveSettings();
+          }),
+      );
+
+    new Setting(containerEl)
       .setName("Maximum PDF pages")
       .setDesc("Upper bound for extracted pages before summarization.")
       .addText((text) =>

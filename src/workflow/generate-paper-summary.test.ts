@@ -73,7 +73,7 @@ describe("generate paper summary", () => {
       tags: ["transformers"],
     });
     createOpenAiJsonCompletionClient.mockReturnValue({});
-    suggestRelatedNoteLinks.mockReturnValue([]);
+    suggestRelatedNoteLinks.mockResolvedValue([]);
     createNoteInVault.mockImplementation(async (_vault, path: string, content: string) => ({
       path,
       content,
@@ -116,6 +116,7 @@ describe("generate paper summary", () => {
         openRouterProviderOrder: "",
         openRouterAllowFallbacks: true,
         outputFolder: "Papers/Summaries",
+        paperNotesScope: "Papers/Summaries",
         maxPages: 20,
         maxChars: 60000,
         openAfterCreate: false,
@@ -131,6 +132,9 @@ describe("generate paper summary", () => {
     expect(notices).toEqual([
       "Custom template unavailable. Used built-in default template.",
     ]);
+    expect(suggestRelatedNoteLinks).toHaveBeenCalledWith(expect.objectContaining({
+      scope: "Papers/Summaries",
+    }));
     expect(createNoteInVault).toHaveBeenCalledTimes(1);
     expect(createNoteInVault.mock.calls[0][2]).toContain("# Attention Is All You Need");
     expect(createNoteInVault.mock.calls[0][2]).toContain("One-Sentence Summary");
@@ -165,7 +169,7 @@ describe("generate paper summary", () => {
       tags: ["transformers"],
     });
     createOpenAiJsonCompletionClient.mockReturnValue({});
-    suggestRelatedNoteLinks.mockReturnValue([]);
+    suggestRelatedNoteLinks.mockResolvedValue([]);
     createNoteInVault.mockResolvedValue({
       path: "Papers/Summaries/Attention Is All You Need (1).md",
     });
@@ -205,6 +209,7 @@ describe("generate paper summary", () => {
         openRouterProviderOrder: "",
         openRouterAllowFallbacks: true,
         outputFolder: "Papers/Summaries",
+        paperNotesScope: "Papers/Summaries",
         maxPages: 20,
         maxChars: 60000,
         openAfterCreate: false,

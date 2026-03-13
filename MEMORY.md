@@ -10,8 +10,8 @@ The plugin MVP currently does all of this:
 - sends one structured request to a remote API-compatible LLM
 - renders a paper-summary note using the English `Paper Ex.md` contract
 - writes frontmatter metadata and tags
-- adds lightweight local related-note suggestions
-- refuses to overwrite an existing output note
+- adds local paper-to-paper related-note suggestions from existing paper summaries
+- creates `name (1).md`, `name (2).md`, and so on when the target note name already exists
 
 ## Current Architecture
 
@@ -22,6 +22,7 @@ Main entry:
 Workflow orchestration:
 
 - `src/workflow/generate-paper-summary.ts`
+- `src/workflow/refresh-related-paper-links.ts`
 
 Settings and UI:
 
@@ -50,6 +51,7 @@ Vault and related notes:
 
 - `src/vault/obsidian-note-file.ts`
 - `src/vault/note-file.ts`
+- `src/related/paper-note-content.ts`
 - `src/related/obsidian-related-notes.ts`
 - `src/related/related-notes.ts`
 
@@ -58,6 +60,7 @@ Vault and related notes:
 Commands:
 
 - `Summarize active PDF`
+- `Refresh related paper links`
 
 File menu:
 
@@ -90,6 +93,7 @@ OpenRouter-specific settings:
 Output/settings behavior:
 
 - `outputFolder`
+- `paperNotesScope`
 - `maxPages`
 - `maxChars`
 - `openAfterCreate`
@@ -129,7 +133,9 @@ That contract is now fully English and should stay stable unless the renderer, t
 
 ### Related notes
 
-- Related-note suggestions are lightweight and local only.
+- Related-note suggestions are local only and now scan existing paper summaries inside the configured paper-notes scope.
+- Scoring combines frontmatter signals and built-in note-section keywords.
+- Refreshing related links is one-way and only rewrites built-in paper-summary notes.
 - No embeddings, Smart Connections, or external semantic index are used in the MVP.
 
 ## Recent Fixes Already Landed

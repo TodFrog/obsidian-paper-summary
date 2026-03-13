@@ -16,6 +16,7 @@ Thanks to the work behind [Obsidian Extract PDF](https://github.com/akaalias/obs
 
 - If a note with the same file name already exists, the plugin now creates `name (1).md`, `name (2).md`, and so on.
 - The built-in template is the default. Custom templates are optional.
+- Use `Refresh related paper links` on a built-in summary note to recompute local paper-to-paper links from your existing paper summaries.
 - Advanced behavior and technical details are documented separately.
 
 ## More details

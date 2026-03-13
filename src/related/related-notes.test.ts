@@ -9,6 +9,8 @@ describe("related notes", () => {
         tags: ["paper", "transformers", "nlp"],
         authors: ["Ashish Vaswani"],
         year: "2017",
+        venue: "NeurIPS",
+        keywordTerms: ["self", "attention", "translation"],
       },
       candidates: [
         {
@@ -17,6 +19,8 @@ describe("related notes", () => {
           tags: ["paper", "nlp"],
           authors: ["Ashish Vaswani"],
           year: "2017",
+          venue: "NeurIPS",
+          keywordTerms: ["attention", "translation", "bleu"],
           isPaperNote: true,
         },
         {
@@ -25,15 +29,20 @@ describe("related notes", () => {
           tags: ["paper", "ml"],
           authors: ["Leo Breiman"],
           year: "2001",
+          venue: "NIPS",
+          keywordTerms: ["trees"],
           isPaperNote: true,
         },
       ],
+      ignoredTags: ["paper"],
       limit: 5,
     });
 
     expect(results[0]?.path).toBe("Papers/Summaries/Sequence Modeling.md");
     expect(results[0]?.reasons).toContain("shared author: Ashish Vaswani");
     expect(results[0]?.reasons).toContain("shared tag: nlp");
+    expect(results[0]?.reasons).toContain("shared venue: NeurIPS");
+    expect(results[0]?.reasons).toContain("shared paper terms: attention, translation");
   });
 
   it("filters out the current note and non-paper candidates", () => {
@@ -44,6 +53,8 @@ describe("related notes", () => {
         tags: ["paper", "transformers", "nlp"],
         authors: ["Ashish Vaswani"],
         year: "2017",
+        venue: "NeurIPS",
+        keywordTerms: ["attention"],
       },
       candidates: [
         {
@@ -52,6 +63,8 @@ describe("related notes", () => {
           tags: ["paper"],
           authors: ["Ashish Vaswani"],
           year: "2017",
+          venue: "NeurIPS",
+          keywordTerms: ["attention"],
           isPaperNote: true,
         },
         {
@@ -60,9 +73,12 @@ describe("related notes", () => {
           tags: ["nlp"],
           authors: [],
           year: "",
+          venue: "",
+          keywordTerms: [],
           isPaperNote: false,
         },
       ],
+      ignoredTags: ["paper"],
       limit: 5,
     });
 
@@ -77,6 +93,8 @@ describe("related notes", () => {
         tags: ["paper", "transformers", "nlp"],
         authors: ["Ashish Vaswani"],
         year: "2017",
+        venue: "NeurIPS",
+        keywordTerms: ["attention", "translation", "self"],
       },
       candidates: [
         {
@@ -85,6 +103,8 @@ describe("related notes", () => {
           tags: ["paper", "transformers", "nlp"],
           authors: ["Ashish Vaswani"],
           year: "2018",
+          venue: "ACL",
+          keywordTerms: ["attention", "translation"],
           isPaperNote: true,
         },
         {
@@ -93,6 +113,8 @@ describe("related notes", () => {
           tags: ["paper", "nlp"],
           authors: [],
           year: "2017",
+          venue: "NeurIPS",
+          keywordTerms: ["translation"],
           isPaperNote: true,
         },
         {
@@ -101,9 +123,12 @@ describe("related notes", () => {
           tags: ["paper", "transformers"],
           authors: [],
           year: "2020",
+          venue: "ICCV",
+          keywordTerms: ["vision", "attention"],
           isPaperNote: true,
         },
       ],
+      ignoredTags: ["paper"],
       limit: 2,
     });
 
