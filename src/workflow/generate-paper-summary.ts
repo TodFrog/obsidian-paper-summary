@@ -5,8 +5,8 @@ import { analyzePaper } from "../llm/paper-analysis";
 import { createOpenAiJsonCompletionClient } from "../llm/openai-json-client";
 import { buildPaperNoteModel, buildPaperNotePath } from "../notes/paper-note-builder";
 import { extractPdfText } from "../pdf/pdf-extractor";
-import { renderPaperNote } from "../renderer/paper-note-renderer";
 import { suggestRelatedNoteLinks } from "../related/obsidian-related-notes";
+import { renderConfiguredPaperNote } from "../templates/paper-note-template";
 import { createNoteInVault } from "../vault/obsidian-note-file";
 import { PaperSummaryError } from "../errors";
 
@@ -25,6 +25,7 @@ export async function generatePaperSummary(params: {
   file: TFile;
   settings: PaperSummarySettings;
   onProgress?: (message: string) => void;
+  onNotice?: (message: string) => void;
 }): Promise<GeneratePaperSummaryResult> {
   if (params.file.extension.toLowerCase() !== "pdf") {
     throw new PaperSummaryError(
@@ -77,7 +78,21 @@ export async function generatePaperSummary(params: {
   });
 
   params.onProgress?.("Creating note...");
-  const noteContent = renderPaperNote(model);
+  const renderedNote = await renderConfiguredPaperNote({
+    vault: params.app.vault,
+    settings: {
+      templateMode: params.settings.templateMode,
+      customTemplatePath: params.settings.customTemplatePath,
+    },
+    extraction,
+    analysis,
+    model,
+    relatedNotes: relatedLinks,
+  });
+  if (renderedNote.fallbackReason) {
+    params.onNotice?.("Custom template unavailable. Used built-in default template.");
+  }
+  const noteContent = renderedNote.content;
   const createdFile = await createNoteInVault(params.app.vault, notePath, noteContent);
 
   if (params.settings.openAfterCreate) {
@@ -85,7 +100,7 @@ export async function generatePaperSummary(params: {
   }
 
   return {
-    notePath,
+    notePath: createdFile.path,
     noteTitle: model.body.title,
     relatedCount: relatedLinks.length,
   };

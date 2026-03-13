@@ -10,7 +10,7 @@ describe("note file creation", () => {
       },
     };
 
-    await createNoteFile(adapter, "Papers/Summaries/Attention.md", "# Note");
+    const createdPath = await createNoteFile(adapter, "Papers/Summaries/Attention.md", "# Note");
 
     expect(created).toEqual([
       {
@@ -18,20 +18,48 @@ describe("note file creation", () => {
         content: "# Note",
       },
     ]);
+    expect(createdPath).toBe("Papers/Summaries/Attention.md");
   });
 
-  it("fails clearly instead of overwriting an existing note", async () => {
+  it("adds a numeric suffix when the target path already exists", async () => {
+    const created: Array<{ path: string; content: string }> = [];
     const adapter: NoteFileAdapter = {
-      exists: async () => true,
-      create: async () => {
-        throw new Error("should not be called");
+      exists: async (path) => {
+        return path === "Papers/Summaries/Attention.md" || path === "Papers/Summaries/Attention (1).md";
+      },
+      create: async (path, content) => {
+        created.push({ path, content });
       },
     };
 
-    await expect(
-      createNoteFile(adapter, "Papers/Summaries/Attention.md", "# Note"),
-    ).rejects.toMatchObject({
-      code: "note_exists",
-    });
+    const createdPath = await createNoteFile(adapter, "Papers/Summaries/Attention.md", "# Note");
+
+    expect(created).toEqual([
+      {
+        path: "Papers/Summaries/Attention (2).md",
+        content: "# Note",
+      },
+    ]);
+    expect(createdPath).toBe("Papers/Summaries/Attention (2).md");
+  });
+
+  it("adds a numeric suffix for root-level files too", async () => {
+    const created: Array<{ path: string; content: string }> = [];
+    const adapter: NoteFileAdapter = {
+      exists: async (path) => path === "Attention.md",
+      create: async (path, content) => {
+        created.push({ path, content });
+      },
+    };
+
+    const createdPath = await createNoteFile(adapter, "Attention.md", "# Note");
+
+    expect(created).toEqual([
+      {
+        path: "Attention (1).md",
+        content: "# Note",
+      },
+    ]);
+    expect(createdPath).toBe("Attention (1).md");
   });
 });

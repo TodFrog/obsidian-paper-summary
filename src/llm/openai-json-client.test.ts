@@ -1,4 +1,4 @@
-import { buildCompletionRequest, extractCompletionText } from "./openai-json-client";
+import { buildCompletionRequest, extractCompletionCandidates, extractCompletionText } from "./openai-json-client";
 
 describe("openai json client", () => {
   it("extracts text from string content", () => {
@@ -13,6 +13,49 @@ describe("openai json client", () => {
         { type: "text", text: "```" },
       ]),
     ).toBe("```json\n{\"title\":\"Paper\"}\n```");
+  });
+
+  it("collects ordered candidates from string content, object-shaped content, and tool call arguments", () => {
+    expect(
+      extractCompletionCandidates({
+        content: { title: "Paper", oneSentenceSummary: "Summary" },
+        tool_calls: [
+          {
+            type: "function",
+            function: {
+              name: "submit_paper_analysis",
+              arguments: "{\"title\":\"Paper from tool\",\"oneSentenceSummary\":\"Summary\"}",
+            },
+          },
+        ],
+      }),
+    ).toEqual([
+      {
+        source: "message.content.object",
+        content: "{\"title\":\"Paper\",\"oneSentenceSummary\":\"Summary\"}",
+      },
+      {
+        source: "message.tool_calls[0].function.arguments",
+        content: "{\"title\":\"Paper from tool\",\"oneSentenceSummary\":\"Summary\"}",
+      },
+    ]);
+  });
+
+  it("collects ordered candidates from content part arrays", () => {
+    expect(
+      extractCompletionCandidates({
+        content: [
+          { type: "text", text: "```json" },
+          { type: "text", text: "{\"title\":\"Paper\"}" },
+          { type: "text", text: "```" },
+        ],
+      }),
+    ).toEqual([
+      {
+        source: "message.content.parts",
+        content: "```json\n{\"title\":\"Paper\"}\n```",
+      },
+    ]);
   });
 
   it("adds OpenRouter headers and provider body when provider is openrouter", () => {

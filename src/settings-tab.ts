@@ -79,7 +79,7 @@ export class PaperSummarySettingTab extends PluginSettingTab {
 
     new Setting(containerEl)
       .setName("Structured output mode")
-      .setDesc("Use JSON object for compatibility or JSON schema for stricter model support.")
+      .setDesc("JSON object is the compatibility default. JSON schema is stricter, but some OpenRouter models or routed providers ignore or reject it.")
       .addDropdown((dropdown) =>
         dropdown
           .addOption("json_object", "JSON object")
@@ -92,8 +92,72 @@ export class PaperSummarySettingTab extends PluginSettingTab {
       );
 
     new Setting(containerEl)
+      .setName("Output language")
+      .setDesc("Controls generated summary prose. Auto uses the paper's dominant language, not the Obsidian UI language. Note headings remain fixed in English.")
+      .addDropdown((dropdown) =>
+        dropdown
+          .addOption("english", "English")
+          .addOption("korean", "Korean")
+          .addOption("auto", "Auto (paper language)")
+          .addOption("custom", "Custom")
+          .setValue(this.plugin.settings.outputLanguage)
+          .onChange(async (value) => {
+            this.plugin.settings.outputLanguage = value as typeof this.plugin.settings.outputLanguage;
+            await this.plugin.saveSettings();
+            this.display();
+          }),
+      );
+
+    new Setting(containerEl)
+      .setName("Custom output language")
+      .setDesc("Used only when Output language is set to Custom. Example: Japanese. Auto mode chooses the paper's dominant language and falls back to English if unclear.")
+      .addText((text) => {
+        text
+          .setPlaceholder("Japanese")
+          .setValue(this.plugin.settings.customOutputLanguage)
+          .setDisabled(this.plugin.settings.outputLanguage !== "custom")
+          .onChange(async (value) => {
+            this.plugin.settings.customOutputLanguage = value;
+            await this.plugin.saveSettings();
+          });
+
+        return text;
+      });
+
+    new Setting(containerEl)
+      .setName("Output template")
+      .setDesc("Built-in default template preserves the current note format. Custom template files are read from the vault and fall back to the built-in template if missing or invalid.")
+      .addDropdown((dropdown) =>
+        dropdown
+          .addOption("built_in", "Built-in default template")
+          .addOption("custom", "Custom template file")
+          .setValue(this.plugin.settings.templateMode)
+          .onChange(async (value) => {
+            this.plugin.settings.templateMode = value as typeof this.plugin.settings.templateMode;
+            await this.plugin.saveSettings();
+            this.display();
+          }),
+      );
+
+    new Setting(containerEl)
+      .setName("Custom template file")
+      .setDesc("Vault-relative Markdown template path. Used only when Output template is set to Custom. Missing or invalid templates automatically fall back to the built-in default.")
+      .addText((text) => {
+        text
+          .setPlaceholder("Templates/Paper Summary.md")
+          .setValue(this.plugin.settings.customTemplatePath)
+          .setDisabled(this.plugin.settings.templateMode !== "custom")
+          .onChange(async (value) => {
+            this.plugin.settings.customTemplatePath = value.trim();
+            await this.plugin.saveSettings();
+          });
+
+        return text;
+      });
+
+    new Setting(containerEl)
       .setName("OpenRouter require parameters")
-      .setDesc("Only use providers that support the requested parameters such as structured output.")
+      .setDesc("Prefer providers that honor structured-output parameters. Some models may still answer with plain JSON text, which the plugin now normalizes before validation.")
       .addToggle((toggle) =>
         toggle.setValue(this.plugin.settings.openRouterRequireParameters).onChange(async (value) => {
           this.plugin.settings.openRouterRequireParameters = value;

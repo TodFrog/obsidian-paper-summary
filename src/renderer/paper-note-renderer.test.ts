@@ -88,4 +88,29 @@ created: 2026-03-11
 - [[Transformer Notes]]
 - [[Sequence Modeling]]`);
   });
+
+  it("renders UTF-8 body content while keeping section headings in English", () => {
+    const model = createPaperTemplateModel({
+      title: "Attention Is All You Need",
+      created: "2026-03-12",
+    });
+
+    model.body.oneSentenceSummary = "이 논문은 트랜스포머 아키텍처를 제안한다.";
+    model.body.keyContributions = ["병렬 학습", "자기어텐션"];
+    model.body.problemStatement = "순환 구조의 병목을 줄이는 것이 목표다.";
+    model.body.proposedMethod = "자기어텐션 기반 인코더와 디코더를 사용한다.";
+    model.body.proposedMethodDetails = ["멀티헤드 어텐션을 사용한다."];
+    model.body.datasetEnvironment = "WMT 2014 번역 데이터셋";
+    model.body.keyMetrics = "BLEU 점수 향상";
+    model.body.results = ["번역 성능 향상"];
+    model.body.limitations = ["대규모 데이터가 필요하다."];
+    model.body.relatedNotes = ["[[관련 노트]]"];
+
+    const rendered = renderPaperNote(model);
+
+    expect(rendered).toContain("> 이 논문은 트랜스포머 아키텍처를 제안한다.");
+    expect(rendered).toContain("One-Sentence Summary");
+    expect(rendered).toContain("Related Notes");
+    expect(rendered).toContain("- [[관련 노트]]");
+  });
 });

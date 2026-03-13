@@ -1,5 +1,5 @@
 import type { JsonCompletionClient } from "./paper-analysis";
-import { analyzePaper, parsePaperAnalysisResponse } from "./paper-analysis";
+import { analyzePaper, buildPaperAnalysisPrompts, parsePaperAnalysisResponse } from "./paper-analysis";
 import { paperAnalysisJsonSchema } from "./paper-analysis-json-schema";
 
 const extraction = {
@@ -39,6 +39,75 @@ describe("paper analysis", () => {
       ),
     ).rejects.toMatchObject({
       code: "missing_api_key",
+    });
+  });
+
+  it("builds English output instructions by default", () => {
+    const prompts = buildPaperAnalysisPrompts(
+      extraction,
+      {
+        outputLanguage: "english",
+        customOutputLanguage: "",
+      } as never,
+    );
+
+    expect(prompts.systemPrompt).toContain("Write all summary prose fields in English.");
+    expect(prompts.systemPrompt).toContain("Keep the paper title in its original language.");
+    expect(prompts.systemPrompt).toContain("Tags must stay English lowercase snake_case.");
+  });
+
+  it("builds Korean and auto language instructions with the expected semantics", () => {
+    const koreanPrompts = buildPaperAnalysisPrompts(
+      extraction,
+      {
+        outputLanguage: "korean",
+        customOutputLanguage: "",
+      } as never,
+    );
+    const autoPrompts = buildPaperAnalysisPrompts(
+      extraction,
+      {
+        outputLanguage: "auto",
+        customOutputLanguage: "",
+      } as never,
+    );
+
+    expect(koreanPrompts.systemPrompt).toContain("Write all summary prose fields in Korean.");
+    expect(autoPrompts.systemPrompt).toContain("Use the paper's dominant language for summary prose fields.");
+    expect(autoPrompts.systemPrompt).toContain("If the dominant language is unclear, fall back to English.");
+  });
+
+  it("builds custom language instructions and rejects blank custom language values", async () => {
+    const prompts = buildPaperAnalysisPrompts(
+      extraction,
+      {
+        outputLanguage: "custom",
+        customOutputLanguage: "Japanese",
+      } as never,
+    );
+
+    expect(prompts.systemPrompt).toContain("Write all summary prose fields in Japanese.");
+
+    const client: JsonCompletionClient = {
+      complete: async () => {
+        throw new Error("should not call remote model");
+      },
+    };
+
+    await expect(
+      analyzePaper(
+        {
+          apiKey: "test-key",
+          baseUrl: "",
+          model: "gpt-4o-mini",
+          outputLanguage: "custom",
+          customOutputLanguage: "   ",
+        } as never,
+        extraction,
+        client,
+      ),
+    ).rejects.toMatchObject({
+      code: "invalid_input",
     });
   });
 
@@ -125,14 +194,74 @@ describe("paper analysis", () => {
     expect(result.tags).toEqual(["transformers", "nlp"]);
   });
 
+  it("normalizes alias keys, snake_case fields, and object-wrapped text before validation", () => {
+    const result = parsePaperAnalysisResponse(`Here is the extracted paper summary:
+
+\`\`\`json
+{
+  "paper_title": "Attention Is All You Need",
+  "authors": [{ "text": "Ashish Vaswani" }, "Noam Shazeer"],
+  "year": 2017,
+  "summary": { "text": "Introduces the Transformer architecture for sequence modeling." },
+  "contributions": ["Self-attention", { "content": "Parallel training" }],
+  "problem_statement": "Recurrent models are slow and hard to parallelize.",
+  "method": { "content": "Use stacked self-attention and feed-forward blocks." },
+  "method_details": [{ "text": "Encoder-decoder architecture" }],
+  "dataset_environment": { "text": "WMT 2014 English-German and English-French translation." },
+  "metrics": ["BLEU improvements over strong baselines."],
+  "results": { "items": ["Improved translation quality"] },
+  "limitations": null,
+  "tags": { "items": ["transformers", "graph neural networks"] }
+}
+\`\`\`
+
+Thanks!`);
+
+    expect(result.title).toBe("Attention Is All You Need");
+    expect(result.authors).toEqual(["Ashish Vaswani", "Noam Shazeer"]);
+    expect(result.year).toBe("2017");
+    expect(result.oneSentenceSummary).toBe("Introduces the Transformer architecture for sequence modeling.");
+    expect(result.keyContributions).toEqual(["Self-attention", "Parallel training"]);
+    expect(result.problemStatement).toBe("Recurrent models are slow and hard to parallelize.");
+    expect(result.proposedMethod).toBe("Use stacked self-attention and feed-forward blocks.");
+    expect(result.proposedMethodDetails).toEqual(["Encoder-decoder architecture"]);
+    expect(result.datasetEnvironment).toBe("WMT 2014 English-German and English-French translation.");
+    expect(result.keyMetrics).toBe("BLEU improvements over strong baselines.");
+    expect(result.results).toEqual(["Improved translation quality"]);
+    expect(result.limitations).toEqual([]);
+    expect(result.tags).toEqual(["transformers", "graph_neural_networks"]);
+  });
+
+  it("keeps the synonym map conservative for semantically broader fields", () => {
+    const result = parsePaperAnalysisResponse(`{
+      "title": "Attention Is All You Need",
+      "oneSentenceSummary": "Summary",
+      "problem": "Do not map this ambiguous alias.",
+      "tags": ["sequence modeling"]
+    }`);
+
+    expect(result.problemStatement).toBe("");
+    expect(result.tags).toEqual(["sequence_modeling"]);
+  });
+
   it("includes exact validation failures and normalized content when required fields are missing", () => {
-    expect(() =>
+    let thrown: unknown;
+    try {
       parsePaperAnalysisResponse(`\`\`\`json
 {
   "title": "Attention Is All You Need"
 }
-\`\`\``),
-    ).toThrowError(/oneSentenceSummary/i);
+\`\`\``);
+    } catch (error) {
+      thrown = error;
+    }
+
+    expect(thrown).toMatchObject({
+      message: "The remote analysis response did not match the expected schema.",
+    });
+    expect((thrown as { details?: { validationIssues?: string[] } }).details?.validationIssues).toEqual(
+      expect.arrayContaining([expect.stringMatching(/oneSentenceSummary/i)]),
+    );
   });
 
   it("wraps client request failures with a stable Paper Summary error", async () => {
@@ -181,19 +310,28 @@ describe("paper analysis", () => {
     ).toBe("Attention Is All You Need");
   });
 
-  it("surfaces raw response, extracted content, and extraction text when schema validation fails", async () => {
+  it("surfaces truncated developer diagnostics without persisting full raw payloads by default", async () => {
     const client: JsonCompletionClient = {
       complete: async () => ({
         content: `{"title":"Missing required fields"}`,
-        extractedContent: `{"title":"Missing required fields"}`,
+        extractedContent: `{"title":"Missing required fields","debug":"${"x".repeat(400)}"}`,
         rawResponse: {
           id: "response-123",
+          model: "openrouter/test-model",
+          choices: [
+            {
+              message: {
+                content: `{"title":"Missing required fields","debug":"${"y".repeat(400)}"}`,
+              },
+            },
+          ],
         },
       }),
     };
 
-    await expect(
-      analyzePaper(
+    let thrown: unknown;
+    try {
+      await analyzePaper(
         {
           apiKey: "test-key",
           baseUrl: "https://openrouter.ai/api/v1",
@@ -201,15 +339,70 @@ describe("paper analysis", () => {
         },
         extraction,
         client,
+      );
+    } catch (error) {
+      thrown = error;
+    }
+
+    expect(thrown).toMatchObject({
+      code: "invalid_response",
+    });
+
+    const details = (thrown as { details?: Record<string, unknown> }).details ?? {};
+    expect(details.rawResponse).toBeUndefined();
+    expect(details.extractedContent).toBeUndefined();
+    expect(details.rawContent).toBeUndefined();
+    expect(details.responseSummary).toMatchObject({
+      id: "response-123",
+      model: "openrouter/test-model",
+    });
+    expect(details.extractedPreview).toEqual(expect.stringContaining("Missing required fields"));
+    expect(String(details.extractedPreview).length).toBeLessThan(260);
+    expect(details.extractionText).toBe(extraction.rawText);
+  });
+
+  it("uses candidate fallbacks when message content is empty and includes ladder diagnostics", async () => {
+    const client: JsonCompletionClient = {
+      complete: async () =>
+        ({
+          content: "",
+          candidates: [
+            {
+              source: "message.tool_calls[0].function.arguments",
+              content: `{"title":"Missing required fields"}`,
+            },
+          ],
+          rawResponse: {
+            id: "response-456",
+          },
+          finishReason: "stop",
+        }) as never,
+    };
+
+    await expect(
+      analyzePaper(
+        {
+          apiKey: "test-key",
+          baseUrl: "https://openrouter.ai/api/v1",
+          model: "moonshotai/kimi-k2.5",
+          provider: "openrouter",
+          structuredOutputMode: "json_object",
+        } as never,
+        extraction,
+        client,
       ),
     ).rejects.toMatchObject({
       code: "invalid_response",
       details: {
-        extractedContent: `{"title":"Missing required fields"}`,
-        rawResponse: {
-          id: "response-123",
+        provider: "openrouter",
+        requestMode: "json_object",
+        stage: "schema_validation",
+        candidateCount: 1,
+        candidateSource: "message.tool_calls[0].function.arguments",
+        finishReason: "stop",
+        responseSummary: {
+          id: "response-456",
         },
-        extractionText: extraction.rawText,
       },
     });
   });

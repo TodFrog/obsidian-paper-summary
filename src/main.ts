@@ -59,6 +59,9 @@ export default class PaperSummaryPlugin extends Plugin {
         onProgress: (message) => {
           new Notice(message, 2500);
         },
+        onNotice: (message) => {
+          new Notice(message, 4000);
+        },
       });
 
       new Notice(

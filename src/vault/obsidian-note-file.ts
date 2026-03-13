@@ -19,9 +19,10 @@ export async function createNoteInVault(
   content: string,
 ): Promise<TFile> {
   let createdFile: TFile | null = null;
+  let createdPath = path;
 
   await ensureFolderExists(vault, path);
-  await createNoteFile(
+  createdPath = await createNoteFile(
     {
       exists: async (notePath) => vault.adapter.exists(notePath),
       create: async (notePath, noteContent) => {
@@ -33,7 +34,7 @@ export async function createNoteInVault(
   );
 
   if (!createdFile) {
-    throw new Error(`Failed to create note at ${path}`);
+    throw new Error(`Failed to create note at ${createdPath}`);
   }
 
   return createdFile;

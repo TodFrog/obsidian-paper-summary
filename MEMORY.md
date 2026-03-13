@@ -207,6 +207,11 @@ Remote:
 
 - `origin = https://github.com/TodFrog/obsidian-paper-summary.git`
 
+Versioning:
+
+- bump the plugin version on every shipped repo change
+- keep `manifest.json`, `package.json`, `package-lock.json`, and `versions.json` in sync
+
 Initial pushed commit:
 
 - `8db5a21` `Initial MVP implementation`

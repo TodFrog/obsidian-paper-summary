@@ -2,7 +2,11 @@ import OpenAI from "openai";
 import type { PaperSummarySettings } from "../settings";
 import { paperAnalysisJsonSchema } from "./paper-analysis-json-schema";
 import { buildOpenRouterRequestOptions } from "./openrouter-request";
-import type { JsonCompletionClient, JsonCompletionResult } from "./paper-analysis";
+import type {
+  JsonCompletionCandidate,
+  JsonCompletionClient,
+  JsonCompletionResult,
+} from "./paper-analysis";
 
 type CompletionRequestSettings = Pick<
   PaperSummarySettings,
@@ -33,6 +37,10 @@ export interface CompletionRequest {
   requestOptions: {
     headers?: Record<string, string>;
   };
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null;
 }
 
 function buildResponseFormat(
@@ -115,7 +123,114 @@ export function extractCompletionText(content: unknown): string {
       .join("\n");
   }
 
+  if (isRecord(content)) {
+    if (typeof content.text === "string") {
+      return content.text;
+    }
+
+    if (typeof content.content === "string") {
+      return content.content;
+    }
+
+    if (content.content !== undefined) {
+      return extractCompletionText(content.content);
+    }
+
+    try {
+      return JSON.stringify(content);
+    } catch {
+      return "";
+    }
+  }
+
   return "";
+}
+
+function addCandidate(
+  candidates: JsonCompletionCandidate[],
+  seenContents: Set<string>,
+  source: string,
+  content: string,
+): void {
+  const trimmed = content.trim();
+  if (!trimmed || seenContents.has(trimmed)) {
+    return;
+  }
+
+  seenContents.add(trimmed);
+  candidates.push({ source, content: trimmed });
+}
+
+export function extractCompletionCandidates(message: unknown): JsonCompletionCandidate[] {
+  const candidates: JsonCompletionCandidate[] = [];
+  const seenContents = new Set<string>();
+
+  if (!isRecord(message)) {
+    return candidates;
+  }
+
+  const { content } = message;
+
+  if (typeof content === "string") {
+    addCandidate(candidates, seenContents, "message.content.string", content);
+  } else if (Array.isArray(content)) {
+    addCandidate(candidates, seenContents, "message.content.parts", extractCompletionText(content));
+  } else if (content !== undefined && content !== null) {
+    addCandidate(candidates, seenContents, "message.content.object", extractCompletionText(content));
+  }
+
+  const toolCalls = Array.isArray(message.tool_calls) ? message.tool_calls : [];
+  toolCalls.forEach((toolCall, index) => {
+    if (!isRecord(toolCall) || !isRecord(toolCall.function)) {
+      return;
+    }
+
+    if (typeof toolCall.function.arguments === "string") {
+      addCandidate(
+        candidates,
+        seenContents,
+        `message.tool_calls[${index}].function.arguments`,
+        toolCall.function.arguments,
+      );
+    }
+  });
+
+  return candidates;
+}
+
+function extractMessageRefusal(message: unknown): string | undefined {
+  if (!isRecord(message)) {
+    return undefined;
+  }
+
+  if (typeof message.refusal === "string" && message.refusal.trim()) {
+    return message.refusal;
+  }
+
+  if (!Array.isArray(message.content)) {
+    return undefined;
+  }
+
+  const refusalText = message.content
+    .map((part) => {
+      if (!isRecord(part) || part.type !== "refusal" || typeof part.refusal !== "string") {
+        return "";
+      }
+
+      return part.refusal.trim();
+    })
+    .filter(Boolean)
+    .join("\n");
+
+  return refusalText || undefined;
+}
+
+function extractMessageToolCalls(message: unknown): unknown {
+  if (!isRecord(message) || !Array.isArray(message.tool_calls) || message.tool_calls.length === 0) {
+    return undefined;
+  }
+
+  return message.tool_calls;
 }
 
 export function createOpenAiJsonCompletionClient(
@@ -147,11 +262,18 @@ export function createOpenAiJsonCompletionClient(
         request.requestOptions as never,
       );
 
-      const extractedContent = response.choices[0]?.message?.content ?? "";
+      const choice = response.choices[0];
+      const message = choice?.message;
+      const candidates = extractCompletionCandidates(message);
+      const extractedContent = message?.content ?? "";
       return {
-        content: extractCompletionText(extractedContent),
+        content: candidates[0]?.content ?? extractCompletionText(extractedContent),
+        candidates,
         extractedContent,
         rawResponse: response,
+        finishReason: choice?.finish_reason,
+        refusal: extractMessageRefusal(message),
+        toolCalls: extractMessageToolCalls(message),
       };
     },
   };

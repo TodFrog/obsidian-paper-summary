@@ -1,5 +1,7 @@
 export type PaperSummaryProvider = "openai" | "openrouter" | "custom";
 export type StructuredOutputMode = "json_object" | "json_schema";
+export type OutputLanguage = "english" | "korean" | "auto" | "custom";
+export type TemplateMode = "built_in" | "custom";
 
 export const OPENROUTER_BASE_URL = "https://openrouter.ai/api/v1";
 
@@ -9,6 +11,10 @@ export interface PaperSummarySettings {
   baseUrl: string;
   model: string;
   structuredOutputMode: StructuredOutputMode;
+  outputLanguage: OutputLanguage;
+  customOutputLanguage: string;
+  templateMode: TemplateMode;
+  customTemplatePath: string;
   openRouterRequireParameters: boolean;
   openRouterAppReferer: string;
   openRouterAppTitle: string;
@@ -29,6 +35,10 @@ export const DEFAULT_SETTINGS: PaperSummarySettings = {
   baseUrl: "",
   model: "gpt-4o-mini",
   structuredOutputMode: "json_object",
+  outputLanguage: "english",
+  customOutputLanguage: "",
+  templateMode: "built_in",
+  customTemplatePath: "",
   openRouterRequireParameters: true,
   openRouterAppReferer: "",
   openRouterAppTitle: "Paper Summary",

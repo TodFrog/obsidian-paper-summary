@@ -30,6 +30,30 @@ describe("settings", () => {
       structuredOutputMode: "json_object",
       openRouterRequireParameters: true,
       openRouterAppTitle: "Paper Summary",
+      outputLanguage: "english",
+      customOutputLanguage: "",
+    });
+  });
+
+  it("adds output language defaults for upgraded users without saved language settings", () => {
+    expect(
+      mergeSettings({
+        paperTag: "paper",
+      }),
+    ).toMatchObject({
+      outputLanguage: "english",
+      customOutputLanguage: "",
+    });
+  });
+
+  it("adds template defaults for upgraded users without saved template settings", () => {
+    expect(
+      mergeSettings({
+        paperTag: "paper",
+      }),
+    ).toMatchObject({
+      templateMode: "built_in",
+      customTemplatePath: "",
     });
   });
 });
