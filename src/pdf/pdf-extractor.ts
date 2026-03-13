@@ -1,7 +1,5 @@
-import * as pdfjs from "pdfjs-dist/legacy/build/pdf.mjs";
-import * as pdfjsWorker from "pdfjs-dist/legacy/build/pdf.worker.mjs";
 import type { PdfExtractionOptions, PdfExtractionResult } from "../contracts";
-import { ensurePdfJsWorkerHandler } from "./pdf-worker";
+import { withPdfJsWorkerHandler } from "./pdf-worker";
 import { buildPdfExtractionResult } from "./pdf-text-shaping";
 
 type TextContentItem = {
@@ -37,33 +35,40 @@ export async function extractPdfText(
   sourcePath: string,
   options: PdfExtractionOptions,
 ): Promise<PdfExtractionResult> {
-  ensurePdfJsWorkerHandler(pdfjsWorker);
+  const pdfjs = await import("pdfjs-dist/legacy/build/pdf.mjs");
 
-  const loadingTask = pdfjs.getDocument({
-    data: new Uint8Array(buffer),
-    useWorkerFetch: false,
-  } as never);
+  // Load the worker only on demand so enabling the plugin does not mutate
+  // Obsidian's viewer-wide PDF.js globals during normal PDF reading.
+  return withPdfJsWorkerHandler(
+    () => import("pdfjs-dist/legacy/build/pdf.worker.mjs"),
+    async () => {
+      const loadingTask = pdfjs.getDocument({
+        data: new Uint8Array(buffer),
+        useWorkerFetch: false,
+      } as never);
 
-  const document = await loadingTask.promise;
+      const document = await loadingTask.promise;
 
-  try {
-    const pageTexts: string[] = [];
-    const pageLimit = Math.min(document.numPages, options.maxPages);
+      try {
+        const pageTexts: string[] = [];
+        const pageLimit = Math.min(document.numPages, options.maxPages);
 
-    for (let pageNumber = 1; pageNumber <= pageLimit; pageNumber += 1) {
-      const page = await document.getPage(pageNumber);
-      const content = await page.getTextContent();
-      pageTexts.push(flattenPdfItems(content.items as TextContentItem[]));
-    }
+        for (let pageNumber = 1; pageNumber <= pageLimit; pageNumber += 1) {
+          const page = await document.getPage(pageNumber);
+          const content = await page.getTextContent();
+          pageTexts.push(flattenPdfItems(content.items as TextContentItem[]));
+        }
 
-    return buildPdfExtractionResult({
-      sourcePath,
-      fallbackTitle: getFallbackTitle(sourcePath),
-      pageTexts,
-      options,
-      pageCount: document.numPages,
-    });
-  } finally {
-    await loadingTask.destroy();
-  }
+        return buildPdfExtractionResult({
+          sourcePath,
+          fallbackTitle: getFallbackTitle(sourcePath),
+          pageTexts,
+          options,
+          pageCount: document.numPages,
+        });
+      } finally {
+        await loadingTask.destroy();
+      }
+    },
+  );
 }

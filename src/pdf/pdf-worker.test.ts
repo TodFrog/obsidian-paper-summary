@@ -1,35 +1,54 @@
-import { ensurePdfJsWorkerHandler } from "./pdf-worker";
+import { withPdfJsWorkerHandler } from "./pdf-worker";
 
 describe("pdf worker registration", () => {
-  it("registers a fake-worker handler on the global scope when none exists", () => {
-    const workerHandler = { name: "handler" };
-    const fakeGlobal = {} as {
-      pdfjsWorker?: {
-        WorkerMessageHandler?: unknown;
-      };
+  it("temporarily installs the imported worker handler and restores the previous global worker", async () => {
+    const existingGlobalWorker = {
+      WorkerMessageHandler: { name: "existing" },
+      existingFlag: true,
     };
+    const fakeGlobal: {
+      pdfjsWorker?: Record<string, unknown>;
+    } = {
+      pdfjsWorker: existingGlobalWorker,
+    };
+    const importedHandler = { name: "imported" };
+    let actionWorkerState: unknown;
 
-    ensurePdfJsWorkerHandler(
-      { WorkerMessageHandler: workerHandler },
+    const result = await withPdfJsWorkerHandler(
+      async () => {
+        fakeGlobal.pdfjsWorker = {
+          WorkerMessageHandler: importedHandler,
+        };
+        return { WorkerMessageHandler: importedHandler };
+      },
+      async () => {
+        actionWorkerState = fakeGlobal.pdfjsWorker;
+        return "ok";
+      },
       fakeGlobal,
     );
 
-    expect(fakeGlobal.pdfjsWorker?.WorkerMessageHandler).toBe(workerHandler);
+    expect(result).toBe("ok");
+    expect(actionWorkerState).toEqual({
+      WorkerMessageHandler: importedHandler,
+      existingFlag: true,
+    });
+    expect(fakeGlobal.pdfjsWorker).toBe(existingGlobalWorker);
   });
 
-  it("does not overwrite an existing worker handler", () => {
-    const existingHandler = { name: "existing" };
-    const fakeGlobal = {
-      pdfjsWorker: {
-        WorkerMessageHandler: existingHandler,
-      },
-    };
+  it("removes temporary worker state when no global worker existed before extraction", async () => {
+    const fakeGlobal: {
+      pdfjsWorker?: Record<string, unknown>;
+    } = {};
 
-    ensurePdfJsWorkerHandler(
-      { WorkerMessageHandler: { name: "new" } },
+    await withPdfJsWorkerHandler(
+      async () => ({ WorkerMessageHandler: { name: "imported" } }),
+      async () => {
+        expect(fakeGlobal.pdfjsWorker?.WorkerMessageHandler).toEqual({ name: "imported" });
+      },
       fakeGlobal,
     );
 
-    expect(fakeGlobal.pdfjsWorker?.WorkerMessageHandler).toBe(existingHandler);
+    expect("pdfjsWorker" in fakeGlobal).toBe(false);
   });
 });
