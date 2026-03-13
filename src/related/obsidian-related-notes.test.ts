@@ -1,5 +1,9 @@
 import { describe, expect, it, vi } from "vitest";
-import { suggestRelatedNoteLinks, suggestRelatedPaperNotes } from "./obsidian-related-notes";
+import {
+  createRelatedPaperCandidate,
+  suggestRelatedNoteLinks,
+  suggestRelatedPaperNotes,
+} from "./obsidian-related-notes";
 
 function builtInPaperNote(title: string, sections?: Partial<{
   summary: string;
@@ -139,7 +143,6 @@ describe("obsidian related notes", () => {
 
     expect(suggestions.map((suggestion) => suggestion.title)).toEqual([
       "Sequence Modeling with Attention",
-      "Vision Transformers",
     ]);
     expect(suggestions[0].reasons).toEqual(expect.arrayContaining([
       "shared author: Ashish Vaswani",
@@ -153,6 +156,30 @@ describe("obsidian related notes", () => {
     expect(cachedRead).not.toHaveBeenCalledWith(expect.objectContaining({
       path: "Archive/Outside Scope.md",
     }));
+  });
+
+  it("strips built-in section labels from keyword extraction", () => {
+    const candidate = createRelatedPaperCandidate({
+      file: {
+        path: "Papers/Summaries/Sequence Modeling.md",
+        basename: "Sequence Modeling",
+      },
+      frontmatter: {
+        tags: ["paper", "nlp"],
+        authors: ["Ashish Vaswani"],
+        year: "2017",
+        venue: "NeurIPS",
+      },
+      content: builtInPaperNote("Sequence Modeling with Attention"),
+      paperTag: "paper",
+    });
+
+    expect(candidate.keywordTerms).not.toContain("problem");
+    expect(candidate.keywordTerms).not.toContain("statement");
+    expect(candidate.keywordTerms).not.toContain("dataset");
+    expect(candidate.keywordTerms).not.toContain("environment");
+    expect(candidate.keywordTerms).not.toContain("key");
+    expect(candidate.keywordTerms).not.toContain("metrics");
   });
 
   it("returns wiki links only for the scored suggestions", async () => {
@@ -191,6 +218,54 @@ describe("obsidian related notes", () => {
       limit: 5,
     });
 
-    expect(links).toEqual(["[[Sequence Modeling with Attention]]"]);
+    expect(links).toEqual([
+      "[[Papers/Summaries/Sequence Modeling|Sequence Modeling with Attention]]",
+    ]);
+  });
+
+  it("uses a path-based wiki link when the visible title does not match the sanitized file name", async () => {
+    const links = await suggestRelatedNoteLinks({
+      current: {
+        path: "Papers/Summaries/Transformer Survey.md",
+        title: "Transformer Survey",
+        tags: ["paper", "transformers"],
+        authors: ["Researcher A"],
+        year: "2024",
+        venue: "NeurIPS",
+        keywordTerms: ["transformer", "survey"],
+      },
+      files: [
+        {
+          path: "Papers/Summaries/Attention_ Is All You Need.md",
+          basename: "Attention_ Is All You Need",
+          extension: "md",
+        },
+      ] as never[],
+      vault: {
+        cachedRead: async () => builtInPaperNote("Attention: Is All You Need", {
+          summary: "Transformer self-attention improves translation.",
+          contributions: ["- Self-attention for translation"],
+          method: "Use stacked self-attention blocks.",
+          results: ["- Better BLEU"],
+        }),
+      } as never,
+      metadataCache: {
+        getFileCache: () => ({
+          frontmatter: {
+            tags: ["paper", "transformers"],
+            authors: ["Ashish Vaswani"],
+            year: "2017",
+            venue: "NeurIPS",
+          },
+        }),
+      } as never,
+      paperTag: "paper",
+      scope: "Papers/Summaries",
+      limit: 5,
+    });
+
+    expect(links).toEqual([
+      "[[Papers/Summaries/Attention_ Is All You Need|Attention: Is All You Need]]",
+    ]);
   });
 });

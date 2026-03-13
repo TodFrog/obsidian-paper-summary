@@ -66,6 +66,16 @@ function normalizeScope(scope: string): string {
   return scope.trim().replace(/^[\\/]+|[\\/]+$/g, "").replace(/\\/g, "/");
 }
 
+function getNotePathWithoutExtension(path: string): string {
+  return path.replace(/\\/g, "/").replace(/\.md$/i, "");
+}
+
+function getPathBasenameWithoutExtension(path: string): string {
+  const normalizedPath = getNotePathWithoutExtension(path);
+  const lastSlashIndex = normalizedPath.lastIndexOf("/");
+  return lastSlashIndex >= 0 ? normalizedPath.slice(lastSlashIndex + 1) : normalizedPath;
+}
+
 function isWithinScope(path: string, scope: string): boolean {
   const normalizedScope = normalizeScope(scope);
   if (!normalizedScope) {
@@ -188,5 +198,11 @@ export async function suggestRelatedNoteLinks(params: {
   limit: number;
 }): Promise<string[]> {
   const suggestions = await suggestRelatedPaperNotes(params);
-  return suggestions.map((suggestion) => `[[${suggestion.title}]]`);
+  return suggestions.map((suggestion) => {
+    if (getPathBasenameWithoutExtension(suggestion.path) === suggestion.title) {
+      return `[[${suggestion.title}]]`;
+    }
+
+    return `[[${getNotePathWithoutExtension(suggestion.path)}|${suggestion.title}]]`;
+  });
 }

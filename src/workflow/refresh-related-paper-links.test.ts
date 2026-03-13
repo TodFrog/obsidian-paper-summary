@@ -112,7 +112,7 @@ describe("refresh related paper links", () => {
     });
     expect(modify).toHaveBeenCalledTimes(1);
     const updatedContent = modify.mock.calls[0]?.[1];
-    expect(updatedContent).toContain("## Related Notes\n- [[Sequence Modeling with Attention]]\n\n## My Thoughts & Ideas (Research Connection)");
+    expect(updatedContent).toContain("## Related Notes\n- [[Papers/Summaries/Sequence Modeling|Sequence Modeling with Attention]]\n\n## My Thoughts & Ideas (Research Connection)");
     expect(updatedContent).toContain("- **Idea:** test");
   });
 

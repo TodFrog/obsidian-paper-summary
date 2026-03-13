@@ -135,4 +135,34 @@ describe("related notes", () => {
     expect(results).toHaveLength(2);
     expect(results[0].score).toBeGreaterThanOrEqual(results[1].score);
   });
+
+  it("does not link papers on weak boilerplate overlap alone", () => {
+    const results = rankRelatedNotes({
+      current: {
+        path: "Papers/Summaries/Paper A.md",
+        title: "Paper A",
+        tags: ["paper"],
+        authors: [],
+        year: "",
+        venue: "",
+        keywordTerms: ["problem", "proposed", "approach"],
+      },
+      candidates: [
+        {
+          path: "Papers/Summaries/Paper B.md",
+          title: "Paper B",
+          tags: ["paper"],
+          authors: [],
+          year: "",
+          venue: "",
+          keywordTerms: ["problem", "proposed", "approach"],
+          isPaperNote: true,
+        },
+      ],
+      ignoredTags: ["paper"],
+      limit: 5,
+    });
+
+    expect(results).toEqual([]);
+  });
 });

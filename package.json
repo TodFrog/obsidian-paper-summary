@@ -1,6 +1,6 @@
 {
   "name": "obsidian-paper-summary",
-  "version": "0.1.8",
+  "version": "0.2.0",
   "description": "Summarize academic PDFs into structured Obsidian notes.",
   "main": "main.js",
   "scripts": {

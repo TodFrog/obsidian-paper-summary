@@ -72,7 +72,13 @@ function normalizeSectionText(lines: string[]): string {
   return lines
     .map((line) => line.trim())
     .filter(Boolean)
-    .map((line) => line.replace(/^>\s*/, "").replace(/^-\s*/, "").trim())
+    .map((line) =>
+      line
+        .replace(/^>\s*/, "")
+        .replace(/^-\s*/, "")
+        .replace(/^\*\*[^*]+:\*\*\s*/, "")
+        .replace(/^[A-Za-z][A-Za-z /&-]+:\s*/, "")
+        .trim())
     .filter(Boolean)
     .join(" ");
 }

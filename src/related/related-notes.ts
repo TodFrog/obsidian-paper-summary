@@ -57,6 +57,7 @@ const SCORE_WEIGHTS = {
 
 const MAX_SHARED_TITLE_TERMS = 4;
 const MAX_SHARED_KEYWORDS = 5;
+const MIN_RELATED_SCORE = 4;
 
 function uniqueIntersection(left: string[], right: string[]): string[] {
   const rightSet = new Set(right.map((value) => value.toLowerCase()));
@@ -147,7 +148,7 @@ export function rankRelatedNotes(params: {
         reasons,
       };
     })
-    .filter((candidate) => candidate.score > 0)
+    .filter((candidate) => candidate.score >= MIN_RELATED_SCORE)
     .sort((left, right) => right.score - left.score || left.path.localeCompare(right.path))
     .slice(0, params.limit);
 }
