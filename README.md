@@ -6,7 +6,7 @@ Thanks to the work behind [Obsidian Extract PDF](https://github.com/akaalias/obs
 
 ## How to use
 
-1. Install the plugin files in your vault at `.obsidian/plugins/obsidian-paper-summary/`.
+1. Install the plugin files in your vault at `.obsidian/plugins/paper-summary/`.
 2. Open the plugin settings and set the important basics: API key, provider, and model.
 3. If needed, choose an output language or a custom note template.
 4. Open a PDF in Obsidian, then run `Summarize PDF`.

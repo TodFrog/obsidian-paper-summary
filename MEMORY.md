@@ -2,7 +2,7 @@
 
 ## Purpose
 
-`obsidian-paper-summary` is an Obsidian community plugin that summarizes PDFs already stored in the vault into a structured paper note.
+`obsidian-paper-summary` is the repository for an Obsidian community plugin whose manifest id is `paper-summary`.
 
 The plugin MVP currently does all of this:
 
@@ -203,7 +203,7 @@ After `npm.cmd run build`, copy these into your vault plugin folder:
 
 Target folder:
 
-`<vault>/.obsidian/plugins/obsidian-paper-summary/`
+`<vault>/.obsidian/plugins/paper-summary/`
 
 Do not overwrite `data.json` unless you intentionally want to reset plugin settings.
 
