@@ -13,3 +13,6 @@ Thumbs.db
 .idea/
 data.json
 MEMORY.md
+main.js
+manifest.json
+styles.css
