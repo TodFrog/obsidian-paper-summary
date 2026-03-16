@@ -13,6 +13,9 @@ Thumbs.db
 .idea/
 data.json
 MEMORY.md
+# Local-only submission draft
+community-plugins.json
+
+# Release artifacts: keep manifest tracked, but ignore built assets in the repo
 main.js
-manifest.json
 styles.css
