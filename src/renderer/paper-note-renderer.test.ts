@@ -11,8 +11,10 @@ describe("paper note renderer", () => {
 aliases: []
 tags:
   - paper
-  - unread
 authors:
+source_pdf:
+source_pdf_link: ""
+reading_status: unread
 year:
 venue:
 url:
@@ -65,6 +67,9 @@ created: 2026-03-11
     model.frontmatter.aliases = ["transformer"];
     model.frontmatter.tags = ["paper", "nlp"];
     model.frontmatter.authors = ["Ashish Vaswani", "Noam Shazeer"];
+    model.frontmatter.sourcePdf = "Papers/Attention_ Is All You Need.pdf";
+    model.frontmatter.sourcePdfLink = "[[Papers/Attention_ Is All You Need.pdf]]";
+    model.frontmatter.readingStatus = "unread";
     model.frontmatter.year = "2017";
     model.frontmatter.venue = "NeurIPS";
     model.frontmatter.url = "https://arxiv.org/abs/1706.03762";
@@ -83,6 +88,9 @@ created: 2026-03-11
     expect(rendered).toContain(`authors:
   - Ashish Vaswani
   - Noam Shazeer`);
+    expect(rendered).toContain('source_pdf: "Papers/Attention_ Is All You Need.pdf"');
+    expect(rendered).toContain('source_pdf_link: "[[Papers/Attention_ Is All You Need.pdf]]"');
+    expect(rendered).toContain("reading_status: unread");
     expect(rendered).toContain(`> Introduces the Transformer architecture for sequence modeling.`);
     expect(rendered).toContain(`## 🔗 Related Notes
 - [[Transformer Notes]]
@@ -112,5 +120,19 @@ created: 2026-03-11
     expect(rendered).toContain("One-Sentence Summary");
     expect(rendered).toContain("Related Notes");
     expect(rendered).toContain("- [[관련 노트]]");
+  });
+  it("quotes source PDF frontmatter scalars for YAML-safe Obsidian paths", () => {
+    const model = createPaperTemplateModel({
+      title: "Paper Ex",
+      created: "2026-03-11",
+    });
+
+    model.frontmatter.sourcePdf = "Papers/Reading Queue/My Paper [v2]: Draft.pdf";
+    model.frontmatter.sourcePdfLink = "[[Papers/Reading Queue/My Paper [v2]: Draft.pdf]]";
+
+    const rendered = renderPaperNote(model);
+
+    expect(rendered).toContain('source_pdf: "Papers/Reading Queue/My Paper [v2]: Draft.pdf"');
+    expect(rendered).toContain('source_pdf_link: "[[Papers/Reading Queue/My Paper [v2]: Draft.pdf]]"');
   });
 });

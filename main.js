@@ -97343,8 +97343,110 @@ var PaperSummaryError = class extends Error {
   }
 };
 
+// src/provider-metadata.ts
+var PROVIDER_METADATA = {
+  openai: {
+    label: "OpenAI",
+    defaultBaseUrl: "",
+    suggestedModel: "gpt-4o-mini",
+    baseUrlPlaceholder: "https://api.openai.com/v1",
+    baseUrlHelp: "Leave blank to use the OpenAI SDK default endpoint.",
+    capabilityNote: "Uses the standard OpenAI-style hosted API path."
+  },
+  openrouter: {
+    label: "OpenRouter",
+    defaultBaseUrl: "https://openrouter.ai/api/v1",
+    suggestedModel: "openai/gpt-4o-mini",
+    baseUrlPlaceholder: "https://openrouter.ai/api/v1",
+    baseUrlHelp: "Leave blank to use the OpenRouter default endpoint.",
+    capabilityNote: "Keeps the existing OpenRouter request extras and routing options."
+  },
+  gemini: {
+    label: "Gemini",
+    defaultBaseUrl: "https://generativelanguage.googleapis.com/v1beta/openai/",
+    suggestedModel: "gemini-2.5-flash",
+    baseUrlPlaceholder: "https://generativelanguage.googleapis.com/v1beta/openai/",
+    baseUrlHelp: "Leave blank to use Google's OpenAI-compatible Gemini endpoint.",
+    capabilityNote: "Uses the current OpenAI-compatible request path. Structured output remains best-effort under that compatibility layer."
+  },
+  claude: {
+    label: "Claude",
+    defaultBaseUrl: "https://api.anthropic.com/v1/",
+    suggestedModel: "claude-sonnet-4-20250514",
+    baseUrlPlaceholder: "https://api.anthropic.com/v1/",
+    baseUrlHelp: "Leave blank to use Anthropic's OpenAI-compatible endpoint.",
+    capabilityNote: "Uses Anthropic's OpenAI compatibility layer. Anthropic ignores response_format there, so structured output is best-effort and may rely on JSON-text fallback."
+  },
+  ollama: {
+    label: "Ollama",
+    defaultBaseUrl: "http://localhost:11434/v1",
+    suggestedModel: "llama3.2",
+    baseUrlPlaceholder: "http://localhost:11434/v1",
+    baseUrlHelp: "Leave blank to use the default local Ollama OpenAI-compatible endpoint.",
+    capabilityNote: "Uses the local OpenAI-compatible Ollama server. Structured output depends on the installed local model and runtime."
+  },
+  others: {
+    label: "Others",
+    defaultBaseUrl: "",
+    suggestedModel: "",
+    baseUrlPlaceholder: "https://your-openai-compatible-endpoint/v1",
+    baseUrlHelp: "Use this for a generic OpenAI-compatible endpoint.",
+    capabilityNote: "Generic compatibility only. No provider-specific guarantees are assumed by the plugin."
+  }
+};
+var OPENROUTER_BASE_URL = PROVIDER_METADATA.openrouter.defaultBaseUrl;
+function normalizeProvider(value) {
+  if (typeof value !== "string") {
+    return "openai";
+  }
+  const normalized = value.trim().toLowerCase();
+  if (normalized === "custom") {
+    return "others";
+  }
+  if (normalized in PROVIDER_METADATA) {
+    return normalized;
+  }
+  return "openai";
+}
+function getProviderMetadata(provider) {
+  return PROVIDER_METADATA[provider];
+}
+function getProviderSettingsVisibility(provider) {
+  return {
+    showApiKey: provider !== "ollama",
+    showBaseUrl: true,
+    showModel: true,
+    showStructuredOutputMode: true,
+    showOpenRouterSettings: provider === "openrouter"
+  };
+}
+function shouldReplaceProviderValue(currentValue, previousAutofillValue) {
+  const trimmedCurrent = currentValue.trim();
+  if (!trimmedCurrent) {
+    return true;
+  }
+  return Boolean(previousAutofillValue) && trimmedCurrent === previousAutofillValue;
+}
+function applyProviderSelectionDefaults(current, nextProvider) {
+  const previousProvider = normalizeProvider(current.provider);
+  const previousMetadata = getProviderMetadata(previousProvider);
+  const nextMetadata = getProviderMetadata(nextProvider);
+  const nextBaseUrl = shouldReplaceProviderValue(current.baseUrl, previousMetadata.defaultBaseUrl) ? nextMetadata.defaultBaseUrl : current.baseUrl.trim();
+  const nextModel = shouldReplaceProviderValue(current.model, previousMetadata.suggestedModel) ? nextMetadata.suggestedModel : current.model.trim();
+  return {
+    provider: nextProvider,
+    baseUrl: nextBaseUrl,
+    model: nextModel
+  };
+}
+function applyProviderSelectionToSettings(current, nextProvider) {
+  return {
+    ...current,
+    ...applyProviderSelectionDefaults(current, nextProvider)
+  };
+}
+
 // src/settings.ts
-var OPENROUTER_BASE_URL = "https://openrouter.ai/api/v1";
 var DEFAULT_SETTINGS = {
   provider: "openai",
   apiKey: "",
@@ -97370,12 +97472,24 @@ var DEFAULT_SETTINGS = {
   relatedNotesLimit: 5
 };
 function mergeSettings(loadedData) {
+  const provider = normalizeProvider(loadedData?.provider);
   const merged = {
     ...DEFAULT_SETTINGS,
-    ...loadedData
+    ...loadedData,
+    provider
   };
-  if (merged.provider === "openrouter" && !merged.baseUrl.trim()) {
-    merged.baseUrl = OPENROUTER_BASE_URL;
+  const providerMetadata = getProviderMetadata(provider);
+  const hasSavedBaseUrl = typeof loadedData?.baseUrl === "string" && loadedData.baseUrl.trim().length > 0;
+  const hasSavedModel = typeof loadedData?.model === "string" && loadedData.model.trim().length > 0;
+  if (!hasSavedBaseUrl) {
+    merged.baseUrl = providerMetadata.defaultBaseUrl;
+  } else {
+    merged.baseUrl = merged.baseUrl.trim();
+  }
+  if (hasSavedModel) {
+    merged.model = merged.model.trim();
+  } else if (providerMetadata.suggestedModel) {
+    merged.model = providerMetadata.suggestedModel;
   }
   if (!loadedData || typeof loadedData.paperNotesScope !== "string" || !loadedData.paperNotesScope.trim()) {
     merged.paperNotesScope = merged.outputFolder;
@@ -97395,41 +97509,54 @@ var PaperSummarySettingTab = class extends import_obsidian.PluginSettingTab {
     const { containerEl } = this;
     containerEl.empty();
     containerEl.addClass("paper-summary-settings");
+    const providerMetadata = getProviderMetadata(this.plugin.settings.provider);
+    const providerVisibility = getProviderSettingsVisibility(this.plugin.settings.provider);
     containerEl.createEl("h2", { text: "Paper Summary" });
-    new import_obsidian.Setting(containerEl).setName("Provider").setDesc("Choose the remote API shape for paper analysis.").addDropdown(
-      (dropdown) => dropdown.addOption("openai", "OpenAI").addOption("openrouter", "OpenRouter").addOption("custom", "Custom").setValue(this.plugin.settings.provider).onChange(async (value) => {
-        this.plugin.settings.provider = value;
-        if (value === "openrouter" && !this.plugin.settings.baseUrl.trim()) {
-          this.plugin.settings.baseUrl = OPENROUTER_BASE_URL;
-        }
+    new import_obsidian.Setting(containerEl).setName("Provider").setDesc("Choose the remote API shape for paper analysis. Gemini, Claude, Ollama, and Others currently use the shared OpenAI-compatible request path.").addDropdown(
+      (dropdown) => dropdown.addOption("openai", "OpenAI").addOption("openrouter", "OpenRouter").addOption("gemini", "Gemini").addOption("claude", "Claude").addOption("ollama", "Ollama").addOption("others", "Others").setValue(this.plugin.settings.provider).onChange(async (value) => {
+        const nextProvider = normalizeProvider(value);
+        this.plugin.settings = applyProviderSelectionToSettings(
+          this.plugin.settings,
+          nextProvider
+        );
         await this.plugin.saveSettings();
         this.display();
       })
     );
-    new import_obsidian.Setting(containerEl).setName("API key").setDesc("Remote LLM API key used for summarization.").addText(
-      (text) => text.setPlaceholder("sk-...").setValue(this.plugin.settings.apiKey).onChange(async (value) => {
-        this.plugin.settings.apiKey = value.trim();
-        await this.plugin.saveSettings();
-      })
-    );
-    new import_obsidian.Setting(containerEl).setName("Base URL").setDesc("Optional API-compatible base URL. Leave blank for the default provider endpoint.").addText(
-      (text) => text.setPlaceholder("https://api.openai.com/v1").setValue(this.plugin.settings.baseUrl).onChange(async (value) => {
-        this.plugin.settings.baseUrl = value.trim();
-        await this.plugin.saveSettings();
-      })
-    );
-    new import_obsidian.Setting(containerEl).setName("Model").setDesc("Remote model identifier used for all paper analysis.").addText(
-      (text) => text.setPlaceholder("gpt-4o-mini").setValue(this.plugin.settings.model).onChange(async (value) => {
-        this.plugin.settings.model = value.trim();
-        await this.plugin.saveSettings();
-      })
-    );
-    new import_obsidian.Setting(containerEl).setName("Structured output mode").setDesc("JSON object is the compatibility default. JSON schema is stricter, but some OpenRouter models or routed providers ignore or reject it.").addDropdown(
-      (dropdown) => dropdown.addOption("json_object", "JSON object").addOption("json_schema", "JSON schema").setValue(this.plugin.settings.structuredOutputMode).onChange(async (value) => {
-        this.plugin.settings.structuredOutputMode = value;
-        await this.plugin.saveSettings();
-      })
-    );
+    if (providerVisibility.showApiKey) {
+      new import_obsidian.Setting(containerEl).setName("API key").setDesc("Remote LLM API key used for summarization.").addText(
+        (text) => text.setPlaceholder("sk-...").setValue(this.plugin.settings.apiKey).onChange(async (value) => {
+          this.plugin.settings.apiKey = value.trim();
+          await this.plugin.saveSettings();
+        })
+      );
+    }
+    if (providerVisibility.showBaseUrl) {
+      new import_obsidian.Setting(containerEl).setName("Base URL").setDesc(`Optional API-compatible base URL. ${providerMetadata.baseUrlHelp} ${providerMetadata.capabilityNote}`).addText(
+        (text) => text.setPlaceholder(providerMetadata.baseUrlPlaceholder).setValue(this.plugin.settings.baseUrl).onChange(async (value) => {
+          this.plugin.settings.baseUrl = value.trim();
+          await this.plugin.saveSettings();
+        })
+      );
+    }
+    if (providerVisibility.showModel) {
+      new import_obsidian.Setting(containerEl).setName("Model").setDesc(
+        providerMetadata.suggestedModel ? `Remote model identifier used for all paper analysis. Suggested for ${providerMetadata.label}: ${providerMetadata.suggestedModel}.` : "Remote model identifier used for all paper analysis. This provider does not assume a default model."
+      ).addText(
+        (text) => text.setPlaceholder(providerMetadata.suggestedModel || "your-model-id").setValue(this.plugin.settings.model).onChange(async (value) => {
+          this.plugin.settings.model = value.trim();
+          await this.plugin.saveSettings();
+        })
+      );
+    }
+    if (providerVisibility.showStructuredOutputMode) {
+      new import_obsidian.Setting(containerEl).setName("Structured output mode").setDesc("JSON object is the compatibility default. JSON schema is stricter, but some OpenRouter models or routed providers ignore or reject it.").addDropdown(
+        (dropdown) => dropdown.addOption("json_object", "JSON object").addOption("json_schema", "JSON schema").setValue(this.plugin.settings.structuredOutputMode).onChange(async (value) => {
+          this.plugin.settings.structuredOutputMode = value;
+          await this.plugin.saveSettings();
+        })
+      );
+    }
     new import_obsidian.Setting(containerEl).setName("Output language").setDesc("Controls generated summary prose. Auto uses the paper's dominant language, not the Obsidian UI language. Note headings remain fixed in English.").addDropdown(
       (dropdown) => dropdown.addOption("english", "English").addOption("korean", "Korean").addOption("auto", "Auto (paper language)").addOption("custom", "Custom").setValue(this.plugin.settings.outputLanguage).onChange(async (value) => {
         this.plugin.settings.outputLanguage = value;
@@ -97458,36 +97585,38 @@ var PaperSummarySettingTab = class extends import_obsidian.PluginSettingTab {
       });
       return text;
     });
-    new import_obsidian.Setting(containerEl).setName("OpenRouter require parameters").setDesc("Prefer providers that honor structured-output parameters. Some models may still answer with plain JSON text, which the plugin now normalizes before validation.").addToggle(
-      (toggle) => toggle.setValue(this.plugin.settings.openRouterRequireParameters).onChange(async (value) => {
-        this.plugin.settings.openRouterRequireParameters = value;
-        await this.plugin.saveSettings();
-      })
-    );
-    new import_obsidian.Setting(containerEl).setName("OpenRouter app referer").setDesc("Optional HTTP-Referer header used for OpenRouter attribution.").addText(
-      (text) => text.setPlaceholder("https://example.com").setValue(this.plugin.settings.openRouterAppReferer).onChange(async (value) => {
-        this.plugin.settings.openRouterAppReferer = value.trim();
-        await this.plugin.saveSettings();
-      })
-    );
-    new import_obsidian.Setting(containerEl).setName("OpenRouter app title").setDesc("Optional X-Title header used for OpenRouter attribution.").addText(
-      (text) => text.setPlaceholder("Paper Summary").setValue(this.plugin.settings.openRouterAppTitle).onChange(async (value) => {
-        this.plugin.settings.openRouterAppTitle = value.trim();
-        await this.plugin.saveSettings();
-      })
-    );
-    new import_obsidian.Setting(containerEl).setName("OpenRouter provider order").setDesc("Optional comma-separated provider preference order, for example openai,anthropic.").addText(
-      (text) => text.setPlaceholder("openai,anthropic").setValue(this.plugin.settings.openRouterProviderOrder).onChange(async (value) => {
-        this.plugin.settings.openRouterProviderOrder = value.trim();
-        await this.plugin.saveSettings();
-      })
-    );
-    new import_obsidian.Setting(containerEl).setName("OpenRouter allow fallbacks").setDesc("Allow OpenRouter to fall back to another provider when the preferred one is unavailable.").addToggle(
-      (toggle) => toggle.setValue(this.plugin.settings.openRouterAllowFallbacks).onChange(async (value) => {
-        this.plugin.settings.openRouterAllowFallbacks = value;
-        await this.plugin.saveSettings();
-      })
-    );
+    if (providerVisibility.showOpenRouterSettings) {
+      new import_obsidian.Setting(containerEl).setName("OpenRouter require parameters").setDesc("Prefer providers that honor structured-output parameters. Some models may still answer with plain JSON text, which the plugin now normalizes before validation.").addToggle(
+        (toggle) => toggle.setValue(this.plugin.settings.openRouterRequireParameters).onChange(async (value) => {
+          this.plugin.settings.openRouterRequireParameters = value;
+          await this.plugin.saveSettings();
+        })
+      );
+      new import_obsidian.Setting(containerEl).setName("OpenRouter app referer").setDesc("Optional HTTP-Referer header used for OpenRouter attribution.").addText(
+        (text) => text.setPlaceholder("https://example.com").setValue(this.plugin.settings.openRouterAppReferer).onChange(async (value) => {
+          this.plugin.settings.openRouterAppReferer = value.trim();
+          await this.plugin.saveSettings();
+        })
+      );
+      new import_obsidian.Setting(containerEl).setName("OpenRouter app title").setDesc("Optional X-Title header used for OpenRouter attribution.").addText(
+        (text) => text.setPlaceholder("Paper Summary").setValue(this.plugin.settings.openRouterAppTitle).onChange(async (value) => {
+          this.plugin.settings.openRouterAppTitle = value.trim();
+          await this.plugin.saveSettings();
+        })
+      );
+      new import_obsidian.Setting(containerEl).setName("OpenRouter provider order").setDesc("Optional comma-separated provider preference order, for example openai,anthropic.").addText(
+        (text) => text.setPlaceholder("openai,anthropic").setValue(this.plugin.settings.openRouterProviderOrder).onChange(async (value) => {
+          this.plugin.settings.openRouterProviderOrder = value.trim();
+          await this.plugin.saveSettings();
+        })
+      );
+      new import_obsidian.Setting(containerEl).setName("OpenRouter allow fallbacks").setDesc("Allow OpenRouter to fall back to another provider when the preferred one is unavailable.").addToggle(
+        (toggle) => toggle.setValue(this.plugin.settings.openRouterAllowFallbacks).onChange(async (value) => {
+          this.plugin.settings.openRouterAllowFallbacks = value;
+          await this.plugin.saveSettings();
+        })
+      );
+    }
     new import_obsidian.Setting(containerEl).setName("Output folder").setDesc("Folder where generated paper summary notes will be created.").addText(
       (text) => text.setPlaceholder("Papers/Summaries").setValue(this.plugin.settings.outputFolder).onChange(async (value) => {
         this.plugin.settings.outputFolder = value.trim();
@@ -108835,12 +108964,27 @@ function renderBulletLines(values) {
   }
   return values.map((value) => `- ${value}`);
 }
+function quoteYamlString(value) {
+  return JSON.stringify(value);
+}
+function renderYamlScalar(key, value) {
+  return value ? `${key}: ${value}` : `${key}:`;
+}
+function renderQuotedYamlScalar(key, value, blankAsQuoted = false) {
+  if (!value) {
+    return blankAsQuoted ? `${key}: ""` : `${key}:`;
+  }
+  return `${key}: ${quoteYamlString(value)}`;
+}
 function createPaperTemplateModel(seed) {
   return {
     frontmatter: {
       aliases: [],
-      tags: ["paper", "unread"],
+      tags: ["paper"],
       authors: [],
+      sourcePdf: "",
+      sourcePdfLink: "",
+      readingStatus: "unread",
       year: "",
       venue: "",
       url: "",
@@ -108883,11 +109027,14 @@ function renderPaperNote(model) {
     ...renderYamlList("aliases", model.frontmatter.aliases, "inline"),
     ...renderYamlList("tags", model.frontmatter.tags),
     ...renderYamlList("authors", model.frontmatter.authors),
-    `year:${model.frontmatter.year ? ` ${model.frontmatter.year}` : ""}`,
-    `venue:${model.frontmatter.venue ? ` ${model.frontmatter.venue}` : ""}`,
-    `url:${model.frontmatter.url ? ` ${model.frontmatter.url}` : ""}`,
-    `code:${model.frontmatter.code ? ` ${model.frontmatter.code}` : ""}`,
-    `status:${model.frontmatter.status ? ` ${model.frontmatter.status}` : ""}`,
+    renderQuotedYamlScalar("source_pdf", model.frontmatter.sourcePdf),
+    renderQuotedYamlScalar("source_pdf_link", model.frontmatter.sourcePdfLink, true),
+    renderYamlScalar("reading_status", model.frontmatter.readingStatus),
+    renderYamlScalar("year", model.frontmatter.year),
+    renderYamlScalar("venue", model.frontmatter.venue),
+    renderYamlScalar("url", model.frontmatter.url),
+    renderYamlScalar("code", model.frontmatter.code),
+    renderYamlScalar("status", model.frontmatter.status),
     `created: ${model.frontmatter.created}`,
     "---",
     `# ${model.body.title}`,
@@ -108946,6 +109093,9 @@ function buildPaperNoteModel(params) {
     ...params.analysis.tags
   ]);
   model.frontmatter.authors = params.analysis.authors;
+  model.frontmatter.sourcePdf = params.extraction.sourcePath;
+  model.frontmatter.sourcePdfLink = `[[${params.extraction.sourcePath}]]`;
+  model.frontmatter.readingStatus = "unread";
   model.frontmatter.year = params.analysis.year;
   model.frontmatter.venue = params.analysis.venue;
   model.frontmatter.url = params.analysis.url;

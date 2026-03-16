@@ -1,6 +1,11 @@
 import { App, PluginSettingTab, Setting } from "obsidian";
 import type PaperSummaryPlugin from "./main";
-import { OPENROUTER_BASE_URL } from "./settings";
+import {
+  applyProviderSelectionToSettings,
+  getProviderMetadata,
+  getProviderSettingsVisibility,
+  normalizeProvider,
+} from "./provider-metadata";
 
 export class PaperSummarySettingTab extends PluginSettingTab {
   plugin: PaperSummaryPlugin;
@@ -14,82 +19,99 @@ export class PaperSummarySettingTab extends PluginSettingTab {
     const { containerEl } = this;
     containerEl.empty();
     containerEl.addClass("paper-summary-settings");
+    const providerMetadata = getProviderMetadata(this.plugin.settings.provider);
+    const providerVisibility = getProviderSettingsVisibility(this.plugin.settings.provider);
 
     containerEl.createEl("h2", { text: "Paper Summary" });
 
     new Setting(containerEl)
       .setName("Provider")
-      .setDesc("Choose the remote API shape for paper analysis.")
+      .setDesc("Choose the remote API shape for paper analysis. Gemini, Claude, Ollama, and Others currently use the shared OpenAI-compatible request path.")
       .addDropdown((dropdown) =>
         dropdown
           .addOption("openai", "OpenAI")
           .addOption("openrouter", "OpenRouter")
-          .addOption("custom", "Custom")
+          .addOption("gemini", "Gemini")
+          .addOption("claude", "Claude")
+          .addOption("ollama", "Ollama")
+          .addOption("others", "Others")
           .setValue(this.plugin.settings.provider)
           .onChange(async (value) => {
-            this.plugin.settings.provider = value as typeof this.plugin.settings.provider;
-
-            if (value === "openrouter" && !this.plugin.settings.baseUrl.trim()) {
-              this.plugin.settings.baseUrl = OPENROUTER_BASE_URL;
-            }
+            const nextProvider = normalizeProvider(value);
+            this.plugin.settings = applyProviderSelectionToSettings(
+              this.plugin.settings,
+              nextProvider,
+            );
 
             await this.plugin.saveSettings();
             this.display();
           }),
       );
 
-    new Setting(containerEl)
-      .setName("API key")
-      .setDesc("Remote LLM API key used for summarization.")
-      .addText((text) =>
-        text
-          .setPlaceholder("sk-...")
-          .setValue(this.plugin.settings.apiKey)
-          .onChange(async (value) => {
-            this.plugin.settings.apiKey = value.trim();
-            await this.plugin.saveSettings();
-          }),
-      );
+    if (providerVisibility.showApiKey) {
+      new Setting(containerEl)
+        .setName("API key")
+        .setDesc("Remote LLM API key used for summarization.")
+        .addText((text) =>
+          text
+            .setPlaceholder("sk-...")
+            .setValue(this.plugin.settings.apiKey)
+            .onChange(async (value) => {
+              this.plugin.settings.apiKey = value.trim();
+              await this.plugin.saveSettings();
+            }),
+        );
+    }
 
-    new Setting(containerEl)
-      .setName("Base URL")
-      .setDesc("Optional API-compatible base URL. Leave blank for the default provider endpoint.")
-      .addText((text) =>
-        text
-          .setPlaceholder("https://api.openai.com/v1")
-          .setValue(this.plugin.settings.baseUrl)
-          .onChange(async (value) => {
-            this.plugin.settings.baseUrl = value.trim();
-            await this.plugin.saveSettings();
-          }),
-      );
+    if (providerVisibility.showBaseUrl) {
+      new Setting(containerEl)
+        .setName("Base URL")
+        .setDesc(`Optional API-compatible base URL. ${providerMetadata.baseUrlHelp} ${providerMetadata.capabilityNote}`)
+        .addText((text) =>
+          text
+            .setPlaceholder(providerMetadata.baseUrlPlaceholder)
+            .setValue(this.plugin.settings.baseUrl)
+            .onChange(async (value) => {
+              this.plugin.settings.baseUrl = value.trim();
+              await this.plugin.saveSettings();
+            }),
+        );
+    }
 
-    new Setting(containerEl)
-      .setName("Model")
-      .setDesc("Remote model identifier used for all paper analysis.")
-      .addText((text) =>
-        text
-          .setPlaceholder("gpt-4o-mini")
-          .setValue(this.plugin.settings.model)
-          .onChange(async (value) => {
-            this.plugin.settings.model = value.trim();
-            await this.plugin.saveSettings();
-          }),
-      );
+    if (providerVisibility.showModel) {
+      new Setting(containerEl)
+        .setName("Model")
+        .setDesc(
+          providerMetadata.suggestedModel
+            ? `Remote model identifier used for all paper analysis. Suggested for ${providerMetadata.label}: ${providerMetadata.suggestedModel}.`
+            : "Remote model identifier used for all paper analysis. This provider does not assume a default model.",
+        )
+        .addText((text) =>
+          text
+            .setPlaceholder(providerMetadata.suggestedModel || "your-model-id")
+            .setValue(this.plugin.settings.model)
+            .onChange(async (value) => {
+              this.plugin.settings.model = value.trim();
+              await this.plugin.saveSettings();
+            }),
+        );
+    }
 
-    new Setting(containerEl)
-      .setName("Structured output mode")
-      .setDesc("JSON object is the compatibility default. JSON schema is stricter, but some OpenRouter models or routed providers ignore or reject it.")
-      .addDropdown((dropdown) =>
-        dropdown
-          .addOption("json_object", "JSON object")
-          .addOption("json_schema", "JSON schema")
-          .setValue(this.plugin.settings.structuredOutputMode)
-          .onChange(async (value) => {
-            this.plugin.settings.structuredOutputMode = value as typeof this.plugin.settings.structuredOutputMode;
-            await this.plugin.saveSettings();
-          }),
-      );
+    if (providerVisibility.showStructuredOutputMode) {
+      new Setting(containerEl)
+        .setName("Structured output mode")
+        .setDesc("JSON object is the compatibility default. JSON schema is stricter, but some OpenRouter models or routed providers ignore or reject it.")
+        .addDropdown((dropdown) =>
+          dropdown
+            .addOption("json_object", "JSON object")
+            .addOption("json_schema", "JSON schema")
+            .setValue(this.plugin.settings.structuredOutputMode)
+            .onChange(async (value) => {
+              this.plugin.settings.structuredOutputMode = value as typeof this.plugin.settings.structuredOutputMode;
+              await this.plugin.saveSettings();
+            }),
+        );
+    }
 
     new Setting(containerEl)
       .setName("Output language")
@@ -155,64 +177,66 @@ export class PaperSummarySettingTab extends PluginSettingTab {
         return text;
       });
 
-    new Setting(containerEl)
-      .setName("OpenRouter require parameters")
-      .setDesc("Prefer providers that honor structured-output parameters. Some models may still answer with plain JSON text, which the plugin now normalizes before validation.")
-      .addToggle((toggle) =>
-        toggle.setValue(this.plugin.settings.openRouterRequireParameters).onChange(async (value) => {
-          this.plugin.settings.openRouterRequireParameters = value;
-          await this.plugin.saveSettings();
-        }),
-      );
-
-    new Setting(containerEl)
-      .setName("OpenRouter app referer")
-      .setDesc("Optional HTTP-Referer header used for OpenRouter attribution.")
-      .addText((text) =>
-        text
-          .setPlaceholder("https://example.com")
-          .setValue(this.plugin.settings.openRouterAppReferer)
-          .onChange(async (value) => {
-            this.plugin.settings.openRouterAppReferer = value.trim();
+    if (providerVisibility.showOpenRouterSettings) {
+      new Setting(containerEl)
+        .setName("OpenRouter require parameters")
+        .setDesc("Prefer providers that honor structured-output parameters. Some models may still answer with plain JSON text, which the plugin now normalizes before validation.")
+        .addToggle((toggle) =>
+          toggle.setValue(this.plugin.settings.openRouterRequireParameters).onChange(async (value) => {
+            this.plugin.settings.openRouterRequireParameters = value;
             await this.plugin.saveSettings();
           }),
-      );
+        );
 
-    new Setting(containerEl)
-      .setName("OpenRouter app title")
-      .setDesc("Optional X-Title header used for OpenRouter attribution.")
-      .addText((text) =>
-        text
-          .setPlaceholder("Paper Summary")
-          .setValue(this.plugin.settings.openRouterAppTitle)
-          .onChange(async (value) => {
-            this.plugin.settings.openRouterAppTitle = value.trim();
+      new Setting(containerEl)
+        .setName("OpenRouter app referer")
+        .setDesc("Optional HTTP-Referer header used for OpenRouter attribution.")
+        .addText((text) =>
+          text
+            .setPlaceholder("https://example.com")
+            .setValue(this.plugin.settings.openRouterAppReferer)
+            .onChange(async (value) => {
+              this.plugin.settings.openRouterAppReferer = value.trim();
+              await this.plugin.saveSettings();
+            }),
+        );
+
+      new Setting(containerEl)
+        .setName("OpenRouter app title")
+        .setDesc("Optional X-Title header used for OpenRouter attribution.")
+        .addText((text) =>
+          text
+            .setPlaceholder("Paper Summary")
+            .setValue(this.plugin.settings.openRouterAppTitle)
+            .onChange(async (value) => {
+              this.plugin.settings.openRouterAppTitle = value.trim();
+              await this.plugin.saveSettings();
+            }),
+        );
+
+      new Setting(containerEl)
+        .setName("OpenRouter provider order")
+        .setDesc("Optional comma-separated provider preference order, for example openai,anthropic.")
+        .addText((text) =>
+          text
+            .setPlaceholder("openai,anthropic")
+            .setValue(this.plugin.settings.openRouterProviderOrder)
+            .onChange(async (value) => {
+              this.plugin.settings.openRouterProviderOrder = value.trim();
+              await this.plugin.saveSettings();
+            }),
+        );
+
+      new Setting(containerEl)
+        .setName("OpenRouter allow fallbacks")
+        .setDesc("Allow OpenRouter to fall back to another provider when the preferred one is unavailable.")
+        .addToggle((toggle) =>
+          toggle.setValue(this.plugin.settings.openRouterAllowFallbacks).onChange(async (value) => {
+            this.plugin.settings.openRouterAllowFallbacks = value;
             await this.plugin.saveSettings();
           }),
-      );
-
-    new Setting(containerEl)
-      .setName("OpenRouter provider order")
-      .setDesc("Optional comma-separated provider preference order, for example openai,anthropic.")
-      .addText((text) =>
-        text
-          .setPlaceholder("openai,anthropic")
-          .setValue(this.plugin.settings.openRouterProviderOrder)
-          .onChange(async (value) => {
-            this.plugin.settings.openRouterProviderOrder = value.trim();
-            await this.plugin.saveSettings();
-          }),
-      );
-
-    new Setting(containerEl)
-      .setName("OpenRouter allow fallbacks")
-      .setDesc("Allow OpenRouter to fall back to another provider when the preferred one is unavailable.")
-      .addToggle((toggle) =>
-        toggle.setValue(this.plugin.settings.openRouterAllowFallbacks).onChange(async (value) => {
-          this.plugin.settings.openRouterAllowFallbacks = value;
-          await this.plugin.saveSettings();
-        }),
-      );
+        );
+    }
 
     new Setting(containerEl)
       .setName("Output folder")

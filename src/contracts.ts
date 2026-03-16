@@ -2,6 +2,9 @@ export interface PaperFrontmatter {
   aliases: string[];
   tags: string[];
   authors: string[];
+  sourcePdf: string;
+  sourcePdfLink: string;
+  readingStatus: string;
   year: string;
   venue: string;
   url: string;

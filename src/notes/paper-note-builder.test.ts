@@ -38,6 +38,9 @@ describe("paper note builder", () => {
     });
 
     expect(model.frontmatter.tags).toEqual(["paper", "transformers", "nlp"]);
+    expect(model.frontmatter.sourcePdf).toBe("Papers/Attention.pdf");
+    expect(model.frontmatter.sourcePdfLink).toBe("[[Papers/Attention.pdf]]");
+    expect(model.frontmatter.readingStatus).toBe("unread");
     expect(model.frontmatter.status).toBe("summarized");
     expect(model.body.title).toBe("Attention Is All You Need");
     expect(model.body.relatedNotes).toEqual(["[[Transformer Notes]]", "[[Sequence Modeling]]"]);

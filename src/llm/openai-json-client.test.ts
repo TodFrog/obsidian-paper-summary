@@ -108,4 +108,30 @@ describe("openai json client", () => {
       type: "json_schema",
     });
   });
+
+  it("keeps gemini, claude, ollama, and others on the shared OpenAI-style request path", () => {
+    for (const provider of ["gemini", "claude", "ollama", "others"] as const) {
+      const request = buildCompletionRequest({
+        provider,
+        structuredOutputMode: "json_object",
+        model: "test-model",
+        systemPrompt: "system",
+        userPrompt: "user",
+        openRouterRequireParameters: true,
+        openRouterProviderOrder: "openai,anthropic",
+        openRouterAllowFallbacks: true,
+        openRouterAppTitle: "Paper Summary",
+        openRouterAppReferer: "https://example.com",
+      });
+
+      expect(request.body).toMatchObject({
+        model: "test-model",
+        response_format: {
+          type: "json_object",
+        },
+      });
+      expect(request.body).not.toHaveProperty("provider");
+      expect(request.requestOptions).toEqual({});
+    }
+  });
 });

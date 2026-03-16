@@ -2,8 +2,10 @@
 aliases: []
 tags:
   - paper
-  - unread
 authors:
+source_pdf:
+source_pdf_link: ""
+reading_status: unread
 year:
 venue:
 url:

@@ -31,6 +31,9 @@ export function buildPaperNoteModel(params: {
     ...params.analysis.tags,
   ]);
   model.frontmatter.authors = params.analysis.authors;
+  model.frontmatter.sourcePdf = params.extraction.sourcePath;
+  model.frontmatter.sourcePdfLink = `[[${params.extraction.sourcePath}]]`;
+  model.frontmatter.readingStatus = "unread";
   model.frontmatter.year = params.analysis.year;
   model.frontmatter.venue = params.analysis.venue;
   model.frontmatter.url = params.analysis.url;

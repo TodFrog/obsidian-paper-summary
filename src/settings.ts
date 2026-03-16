@@ -1,9 +1,12 @@
-export type PaperSummaryProvider = "openai" | "openrouter" | "custom";
+import {
+  getProviderMetadata,
+  normalizeProvider,
+  type PaperSummaryProvider,
+} from "./provider-metadata";
+
 export type StructuredOutputMode = "json_object" | "json_schema";
 export type OutputLanguage = "english" | "korean" | "auto" | "custom";
 export type TemplateMode = "built_in" | "custom";
-
-export const OPENROUTER_BASE_URL = "https://openrouter.ai/api/v1";
 
 export interface PaperSummarySettings {
   provider: PaperSummaryProvider;
@@ -58,13 +61,26 @@ export const DEFAULT_SETTINGS: PaperSummarySettings = {
 export function mergeSettings(
   loadedData?: Partial<PaperSummarySettings> | null,
 ): PaperSummarySettings {
+  const provider = normalizeProvider(loadedData?.provider);
   const merged = {
     ...DEFAULT_SETTINGS,
     ...loadedData,
+    provider,
   };
+  const providerMetadata = getProviderMetadata(provider);
+  const hasSavedBaseUrl = typeof loadedData?.baseUrl === "string" && loadedData.baseUrl.trim().length > 0;
+  const hasSavedModel = typeof loadedData?.model === "string" && loadedData.model.trim().length > 0;
 
-  if (merged.provider === "openrouter" && !merged.baseUrl.trim()) {
-    merged.baseUrl = OPENROUTER_BASE_URL;
+  if (!hasSavedBaseUrl) {
+    merged.baseUrl = providerMetadata.defaultBaseUrl;
+  } else {
+    merged.baseUrl = merged.baseUrl.trim();
+  }
+
+  if (hasSavedModel) {
+    merged.model = merged.model.trim();
+  } else if (providerMetadata.suggestedModel) {
+    merged.model = providerMetadata.suggestedModel;
   }
 
   if (!loadedData || typeof loadedData.paperNotesScope !== "string" || !loadedData.paperNotesScope.trim()) {

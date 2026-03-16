@@ -77,6 +77,8 @@ export function buildCompletionRequest(
 
   const requestOptions: CompletionRequest["requestOptions"] = {};
 
+  // Gemini, Claude, Ollama, and Others currently use the shared OpenAI-compatible path.
+  // OpenRouter is the only provider with explicit request-shape extras in this client.
   if (params.provider === "openrouter") {
     const openRouterOptions = buildOpenRouterRequestOptions(params);
     Object.assign(body, openRouterOptions.extraBody);

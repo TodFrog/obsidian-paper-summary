@@ -19,12 +19,31 @@ function renderBulletLines(values: string[]): string[] {
   return values.map((value) => `- ${value}`);
 }
 
+function quoteYamlString(value: string): string {
+  return JSON.stringify(value);
+}
+
+function renderYamlScalar(key: string, value: string): string {
+  return value ? `${key}: ${value}` : `${key}:`;
+}
+
+function renderQuotedYamlScalar(key: string, value: string, blankAsQuoted = false): string {
+  if (!value) {
+    return blankAsQuoted ? `${key}: ""` : `${key}:`;
+  }
+
+  return `${key}: ${quoteYamlString(value)}`;
+}
+
 export function createPaperTemplateModel(seed: PaperTemplateSeed): PaperNoteViewModel {
   return {
     frontmatter: {
       aliases: [],
-      tags: ["paper", "unread"],
+      tags: ["paper"],
       authors: [],
+      sourcePdf: "",
+      sourcePdfLink: "",
+      readingStatus: "unread",
       year: "",
       venue: "",
       url: "",
@@ -68,11 +87,14 @@ export function renderPaperNote(model: PaperNoteViewModel): string {
     ...renderYamlList("aliases", model.frontmatter.aliases, "inline"),
     ...renderYamlList("tags", model.frontmatter.tags),
     ...renderYamlList("authors", model.frontmatter.authors),
-    `year:${model.frontmatter.year ? ` ${model.frontmatter.year}` : ""}`,
-    `venue:${model.frontmatter.venue ? ` ${model.frontmatter.venue}` : ""}`,
-    `url:${model.frontmatter.url ? ` ${model.frontmatter.url}` : ""}`,
-    `code:${model.frontmatter.code ? ` ${model.frontmatter.code}` : ""}`,
-    `status:${model.frontmatter.status ? ` ${model.frontmatter.status}` : ""}`,
+    renderQuotedYamlScalar("source_pdf", model.frontmatter.sourcePdf),
+    renderQuotedYamlScalar("source_pdf_link", model.frontmatter.sourcePdfLink, true),
+    renderYamlScalar("reading_status", model.frontmatter.readingStatus),
+    renderYamlScalar("year", model.frontmatter.year),
+    renderYamlScalar("venue", model.frontmatter.venue),
+    renderYamlScalar("url", model.frontmatter.url),
+    renderYamlScalar("code", model.frontmatter.code),
+    renderYamlScalar("status", model.frontmatter.status),
     `created: ${model.frontmatter.created}`,
     "---",
     `# ${model.body.title}`,
