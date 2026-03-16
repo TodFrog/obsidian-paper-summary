@@ -3,7 +3,7 @@
   "name": "Paper Summary",
   "version": "0.2.1",
   "minAppVersion": "1.5.0",
-  "description": "Generate structured paper summary notes from PDFs in Obsidian.",
+  "description": "Generate structured paper summary notes from PDFs.",
   "author": "Cho, Min Kyu",
   "isDesktopOnly": true
 }
