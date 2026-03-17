@@ -28,12 +28,12 @@ export class PaperSummarySettingTab extends PluginSettingTab {
     const providerVisibility = getProviderSettingsVisibility(this.plugin.settings.provider);
 
     new Setting(containerEl)
-      .setName("Paper summary")
+      .setName("General")
       .setHeading();
 
     new Setting(containerEl)
       .setName("Provider")
-      .setDesc("Choose the remote API shape for paper analysis. Gemini, Claude, Ollama, and others currently use the shared OpenAI-compatible request path.")
+      .setDesc("Choose the API provider for paper analysis. Gemini, Claude, Ollama, and other providers currently use the shared OpenAI-compatible request path.")
       .addDropdown((dropdown) =>
         dropdown
           .addOption("openai", "OpenAI")
@@ -58,10 +58,10 @@ export class PaperSummarySettingTab extends PluginSettingTab {
     if (providerVisibility.showApiKey) {
       new Setting(containerEl)
         .setName("API key")
-        .setDesc("Remote LLM API key used for summarization.")
+        .setDesc("API key for remote summarization requests.")
         .addText((text) =>
           text
-            .setPlaceholder("sk-...")
+            .setPlaceholder("Paste API key")
             .setValue(this.plugin.settings.apiKey)
             .onChange(async (value) => {
               this.plugin.settings.apiKey = value.trim();
@@ -107,7 +107,7 @@ export class PaperSummarySettingTab extends PluginSettingTab {
     if (providerVisibility.showStructuredOutputMode) {
       new Setting(containerEl)
         .setName("Structured output mode")
-        .setDesc("JSON object is the compatibility default. JSON schema is stricter, but some OpenRouter models or routed providers ignore or reject it.")
+        .setDesc("Use JSON object as the compatibility default. JSON schema is stricter, but some OpenRouter models or routed providers ignore or reject it.")
         .addDropdown((dropdown) =>
           dropdown
             .addOption("json_object", "JSON object")
@@ -125,7 +125,7 @@ export class PaperSummarySettingTab extends PluginSettingTab {
 
     new Setting(containerEl)
       .setName("Output language")
-      .setDesc("Controls generated summary prose. Auto uses the paper's dominant language, not the Obsidian UI language. Note headings remain fixed in English.")
+      .setDesc("Controls generated summary prose. Automatic mode uses the paper's dominant language instead of the Obsidian UI language. Note headings stay in English.")
       .addDropdown((dropdown) =>
         dropdown
           .addOption("english", "English")
@@ -145,7 +145,7 @@ export class PaperSummarySettingTab extends PluginSettingTab {
 
     new Setting(containerEl)
       .setName("Custom output language")
-      .setDesc("Used only when output language is set to custom. Example: Japanese. Auto mode chooses the paper's dominant language and falls back to English if unclear.")
+      .setDesc("Use this only when output language is set to custom. For example: Japanese. Automatic mode uses the paper's dominant language and falls back to English when unclear.")
       .addText((text) => {
         text
           .setPlaceholder("Japanese")
@@ -195,8 +195,12 @@ export class PaperSummarySettingTab extends PluginSettingTab {
 
     if (providerVisibility.showOpenRouterSettings) {
       new Setting(containerEl)
-        .setName("OpenRouter require parameters")
-        .setDesc("Prefer providers that honor structured-output parameters. Some models may still answer with plain JSON text, which the plugin now normalizes before validation.")
+        .setName("OpenRouter settings")
+        .setHeading();
+
+      new Setting(containerEl)
+        .setName("Require parameters")
+        .setDesc("Prefer providers that honor structured-output parameters. Some models may still answer with plain JSON text, which the plugin normalizes before validation.")
         .addToggle((toggle) =>
           toggle.setValue(this.plugin.settings.openRouterRequireParameters).onChange(async (value) => {
             this.plugin.settings.openRouterRequireParameters = value;
@@ -205,8 +209,8 @@ export class PaperSummarySettingTab extends PluginSettingTab {
         );
 
       new Setting(containerEl)
-        .setName("OpenRouter app referer")
-        .setDesc("Optional HTTP-Referer header used for OpenRouter attribution.")
+        .setName("App referer")
+        .setDesc("Optional HTTP-Referer header for OpenRouter attribution.")
         .addText((text) =>
           text
             .setPlaceholder("https://example.com")
@@ -218,8 +222,8 @@ export class PaperSummarySettingTab extends PluginSettingTab {
         );
 
       new Setting(containerEl)
-        .setName("OpenRouter app title")
-        .setDesc("Optional X-Title header used for OpenRouter attribution.")
+        .setName("App title")
+        .setDesc("Optional X-Title header for OpenRouter attribution.")
         .addText((text) =>
           text
             .setPlaceholder("Paper summary")
@@ -231,11 +235,11 @@ export class PaperSummarySettingTab extends PluginSettingTab {
         );
 
       new Setting(containerEl)
-        .setName("OpenRouter provider order")
-        .setDesc("Optional comma-separated provider preference order, for example openai,anthropic.")
+        .setName("Provider order")
+        .setDesc("Optional comma-separated provider order, for example: openai, anthropic.")
         .addText((text) =>
           text
-            .setPlaceholder("openai,anthropic")
+            .setPlaceholder("openai, anthropic")
             .setValue(this.plugin.settings.openRouterProviderOrder)
             .onChange(async (value) => {
               this.plugin.settings.openRouterProviderOrder = value.trim();
@@ -244,8 +248,8 @@ export class PaperSummarySettingTab extends PluginSettingTab {
         );
 
       new Setting(containerEl)
-        .setName("OpenRouter allow fallbacks")
-        .setDesc("Allow OpenRouter to fall back to another provider when the preferred one is unavailable.")
+        .setName("Allow fallbacks")
+        .setDesc("Allow a fallback to another provider when the preferred one is unavailable.")
         .addToggle((toggle) =>
           toggle.setValue(this.plugin.settings.openRouterAllowFallbacks).onChange(async (value) => {
             this.plugin.settings.openRouterAllowFallbacks = value;
@@ -259,7 +263,7 @@ export class PaperSummarySettingTab extends PluginSettingTab {
       .setDesc("Folder where generated paper summary notes will be created.")
       .addText((text) =>
         text
-          .setPlaceholder("Papers/Summaries")
+          .setPlaceholder("papers/summaries")
           .setValue(this.plugin.settings.outputFolder)
           .onChange(async (value) => {
             this.plugin.settings.outputFolder = value.trim();
@@ -272,7 +276,7 @@ export class PaperSummarySettingTab extends PluginSettingTab {
       .setDesc("Vault-relative folder scanned for existing paper summary notes when generating or refreshing related paper links. Defaults to the output folder.")
       .addText((text) =>
         text
-          .setPlaceholder(this.plugin.settings.outputFolder || "Papers/Summaries")
+          .setPlaceholder(this.plugin.settings.outputFolder || "papers/summaries")
           .setValue(this.plugin.settings.paperNotesScope)
           .onChange(async (value) => {
             this.plugin.settings.paperNotesScope = value.trim() || this.plugin.settings.outputFolder;
