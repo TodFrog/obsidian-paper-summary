@@ -27,21 +27,18 @@ export class PaperSummarySettingTab extends PluginSettingTab {
     const providerMetadata = getProviderMetadata(this.plugin.settings.provider);
     const providerVisibility = getProviderSettingsVisibility(this.plugin.settings.provider);
 
-    new Setting(containerEl)
-      .setName("General")
-      .setHeading();
 
     new Setting(containerEl)
       .setName("Provider")
-      .setDesc("Choose the API provider for paper analysis. Gemini, Claude, Ollama, and other providers currently use the shared OpenAI-compatible request path.")
+      .setDesc("Choose the provider used for paper analysis. Most providers use the shared compatible request path.")
       .addDropdown((dropdown) =>
         dropdown
-          .addOption("openai", "OpenAI")
-          .addOption("openrouter", "OpenRouter")
-          .addOption("gemini", "Gemini")
-          .addOption("claude", "Claude")
-          .addOption("ollama", "Ollama")
-          .addOption("others", "Others")
+          .addOption("openai", "openai")
+          .addOption("openrouter", "openrouter")
+          .addOption("gemini", "gemini")
+          .addOption("claude", "claude")
+          .addOption("ollama", "ollama")
+          .addOption("others", "other")
           .setValue(this.plugin.settings.provider)
           .onChange(async (value) => {
             const nextProvider = normalizeProvider(value);
@@ -107,7 +104,7 @@ export class PaperSummarySettingTab extends PluginSettingTab {
     if (providerVisibility.showStructuredOutputMode) {
       new Setting(containerEl)
         .setName("Structured output mode")
-        .setDesc("Use JSON object as the compatibility default. JSON schema is stricter, but some OpenRouter models or routed providers ignore or reject it.")
+        .setDesc("Use JSON object as the compatibility default. JSON schema is stricter, but some routed providers may ignore or reject it.")
         .addDropdown((dropdown) =>
           dropdown
             .addOption("json_object", "JSON object")
@@ -125,7 +122,7 @@ export class PaperSummarySettingTab extends PluginSettingTab {
 
     new Setting(containerEl)
       .setName("Output language")
-      .setDesc("Controls generated summary prose. Automatic mode uses the paper's dominant language instead of the Obsidian UI language. Note headings stay in English.")
+      .setDesc("Controls generated summary prose. Automatic mode uses the paper's dominant language instead of the app language. Note headings stay in English.")
       .addDropdown((dropdown) =>
         dropdown
           .addOption("english", "English")
@@ -145,7 +142,7 @@ export class PaperSummarySettingTab extends PluginSettingTab {
 
     new Setting(containerEl)
       .setName("Custom output language")
-      .setDesc("Use this only when output language is set to custom. For example: Japanese. Automatic mode uses the paper's dominant language and falls back to English when unclear.")
+      .setDesc("Use this only when output language is set to custom. Example: Japanese. Automatic mode uses the paper's dominant language and falls back to English when unclear.")
       .addText((text) => {
         text
           .setPlaceholder("Japanese")
@@ -195,7 +192,7 @@ export class PaperSummarySettingTab extends PluginSettingTab {
 
     if (providerVisibility.showOpenRouterSettings) {
       new Setting(containerEl)
-        .setName("OpenRouter settings")
+        .setName("Routing options")
         .setHeading();
 
       new Setting(containerEl)
@@ -210,7 +207,7 @@ export class PaperSummarySettingTab extends PluginSettingTab {
 
       new Setting(containerEl)
         .setName("App referer")
-        .setDesc("Optional HTTP-Referer header for OpenRouter attribution.")
+        .setDesc("Optional HTTP-Referer header used for attribution.")
         .addText((text) =>
           text
             .setPlaceholder("https://example.com")
@@ -223,7 +220,7 @@ export class PaperSummarySettingTab extends PluginSettingTab {
 
       new Setting(containerEl)
         .setName("App title")
-        .setDesc("Optional X-Title header for OpenRouter attribution.")
+        .setDesc("Optional X-Title header used for attribution.")
         .addText((text) =>
           text
             .setPlaceholder("Paper summary")
@@ -239,7 +236,7 @@ export class PaperSummarySettingTab extends PluginSettingTab {
         .setDesc("Optional comma-separated provider order, for example: openai, anthropic.")
         .addText((text) =>
           text
-            .setPlaceholder("openai, anthropic")
+            .setPlaceholder("Example: openai, anthropic")
             .setValue(this.plugin.settings.openRouterProviderOrder)
             .onChange(async (value) => {
               this.plugin.settings.openRouterProviderOrder = value.trim();
@@ -263,7 +260,7 @@ export class PaperSummarySettingTab extends PluginSettingTab {
       .setDesc("Folder where generated paper summary notes will be created.")
       .addText((text) =>
         text
-          .setPlaceholder("papers/summaries")
+          .setPlaceholder("Example: papers/summaries")
           .setValue(this.plugin.settings.outputFolder)
           .onChange(async (value) => {
             this.plugin.settings.outputFolder = value.trim();
@@ -331,7 +328,7 @@ export class PaperSummarySettingTab extends PluginSettingTab {
       .setDesc("Tag always applied to generated paper notes.")
       .addText((text) =>
         text
-          .setPlaceholder("paper")
+          .setPlaceholder("Example: paper")
           .setValue(this.plugin.settings.paperTag)
           .onChange(async (value) => {
             this.plugin.settings.paperTag = value.trim() || "paper";
@@ -344,7 +341,7 @@ export class PaperSummarySettingTab extends PluginSettingTab {
       .setDesc("Status written into frontmatter for newly generated notes.")
       .addText((text) =>
         text
-          .setPlaceholder("summarized")
+          .setPlaceholder("Example: summarized")
           .setValue(this.plugin.settings.defaultStatus)
           .onChange(async (value) => {
             this.plugin.settings.defaultStatus = value.trim();
