@@ -51,27 +51,27 @@ function builtInPaperNote(title: string, sections?: Partial<{
 
 describe("obsidian related notes", () => {
   it("scans only the configured scope, includes built-in paper notes, and returns ranked suggestions", async () => {
-    const cachedRead = vi.fn(async (file: { path: string }) => {
+    const cachedRead = vi.fn((file: { path: string }) => {
       if (file.path === "Papers/Summaries/Sequence Modeling.md") {
-        return builtInPaperNote("Sequence Modeling with Attention", {
+        return Promise.resolve(builtInPaperNote("Sequence Modeling with Attention", {
           summary: "Attention improves translation quality.",
           contributions: ["- Shared attention mechanisms"],
           method: "Use self-attention for translation.",
           results: ["- Higher BLEU on WMT"],
-        });
+        }));
       }
 
       if (file.path === "Papers/Summaries/Vision Note.md") {
-        return builtInPaperNote("Vision Transformers", {
+        return Promise.resolve(builtInPaperNote("Vision Transformers", {
           summary: "Apply transformers to images.",
           contributions: ["- Patch embeddings"],
           method: "Use transformer encoders for vision.",
           results: ["- Strong ImageNet results"],
           limitations: ["- Requires more pretraining"],
-        });
+        }));
       }
 
-      throw new Error(`Unexpected read for ${file.path}`);
+      return Promise.reject(new Error(`Unexpected read for ${file.path}`));
     });
 
     const metadataCache = {
@@ -201,7 +201,7 @@ describe("obsidian related notes", () => {
         },
       ] as never[],
       vault: {
-        cachedRead: async () => builtInPaperNote("Sequence Modeling with Attention"),
+        cachedRead: () => Promise.resolve(builtInPaperNote("Sequence Modeling with Attention")),
       } as never,
       metadataCache: {
         getFileCache: () => ({
@@ -242,12 +242,12 @@ describe("obsidian related notes", () => {
         },
       ] as never[],
       vault: {
-        cachedRead: async () => builtInPaperNote("Attention: Is All You Need", {
+        cachedRead: () => Promise.resolve(builtInPaperNote("Attention: Is All You Need", {
           summary: "Transformer self-attention improves translation.",
           contributions: ["- Self-attention for translation"],
           method: "Use stacked self-attention blocks.",
           results: ["- Better BLEU"],
-        }),
+        })),
       } as never,
       metadataCache: {
         getFileCache: () => ({

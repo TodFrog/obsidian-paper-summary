@@ -6,6 +6,11 @@ import {
   getProviderSettingsVisibility,
   normalizeProvider,
 } from "./provider-metadata";
+import {
+  normalizeOutputLanguage,
+  normalizeStructuredOutputMode,
+  normalizeTemplateMode,
+} from "./settings";
 
 export class PaperSummarySettingTab extends PluginSettingTab {
   plugin: PaperSummaryPlugin;
@@ -22,11 +27,13 @@ export class PaperSummarySettingTab extends PluginSettingTab {
     const providerMetadata = getProviderMetadata(this.plugin.settings.provider);
     const providerVisibility = getProviderSettingsVisibility(this.plugin.settings.provider);
 
-    containerEl.createEl("h2", { text: "Paper Summary" });
+    new Setting(containerEl)
+      .setName("Paper summary")
+      .setHeading();
 
     new Setting(containerEl)
       .setName("Provider")
-      .setDesc("Choose the remote API shape for paper analysis. Gemini, Claude, Ollama, and Others currently use the shared OpenAI-compatible request path.")
+      .setDesc("Choose the remote API shape for paper analysis. Gemini, Claude, Ollama, and others currently use the shared OpenAI-compatible request path.")
       .addDropdown((dropdown) =>
         dropdown
           .addOption("openai", "OpenAI")
@@ -107,7 +114,10 @@ export class PaperSummarySettingTab extends PluginSettingTab {
             .addOption("json_schema", "JSON schema")
             .setValue(this.plugin.settings.structuredOutputMode)
             .onChange(async (value) => {
-              this.plugin.settings.structuredOutputMode = value as typeof this.plugin.settings.structuredOutputMode;
+              this.plugin.settings.structuredOutputMode = normalizeStructuredOutputMode(
+                value,
+                this.plugin.settings.structuredOutputMode,
+              );
               await this.plugin.saveSettings();
             }),
         );
@@ -124,7 +134,10 @@ export class PaperSummarySettingTab extends PluginSettingTab {
           .addOption("custom", "Custom")
           .setValue(this.plugin.settings.outputLanguage)
           .onChange(async (value) => {
-            this.plugin.settings.outputLanguage = value as typeof this.plugin.settings.outputLanguage;
+            this.plugin.settings.outputLanguage = normalizeOutputLanguage(
+              value,
+              this.plugin.settings.outputLanguage,
+            );
             await this.plugin.saveSettings();
             this.display();
           }),
@@ -132,7 +145,7 @@ export class PaperSummarySettingTab extends PluginSettingTab {
 
     new Setting(containerEl)
       .setName("Custom output language")
-      .setDesc("Used only when Output language is set to Custom. Example: Japanese. Auto mode chooses the paper's dominant language and falls back to English if unclear.")
+      .setDesc("Used only when output language is set to custom. Example: Japanese. Auto mode chooses the paper's dominant language and falls back to English if unclear.")
       .addText((text) => {
         text
           .setPlaceholder("Japanese")
@@ -155,7 +168,10 @@ export class PaperSummarySettingTab extends PluginSettingTab {
           .addOption("custom", "Custom template file")
           .setValue(this.plugin.settings.templateMode)
           .onChange(async (value) => {
-            this.plugin.settings.templateMode = value as typeof this.plugin.settings.templateMode;
+            this.plugin.settings.templateMode = normalizeTemplateMode(
+              value,
+              this.plugin.settings.templateMode,
+            );
             await this.plugin.saveSettings();
             this.display();
           }),
@@ -163,7 +179,7 @@ export class PaperSummarySettingTab extends PluginSettingTab {
 
     new Setting(containerEl)
       .setName("Custom template file")
-      .setDesc("Vault-relative Markdown template path. Used only when Output template is set to Custom. Missing or invalid templates automatically fall back to the built-in default.")
+      .setDesc("Vault-relative Markdown template path. Used only when output template is set to custom. Missing or invalid templates automatically fall back to the built-in default.")
       .addText((text) => {
         text
           .setPlaceholder("Templates/Paper Summary.md")
@@ -206,7 +222,7 @@ export class PaperSummarySettingTab extends PluginSettingTab {
         .setDesc("Optional X-Title header used for OpenRouter attribution.")
         .addText((text) =>
           text
-            .setPlaceholder("Paper Summary")
+            .setPlaceholder("Paper summary")
             .setValue(this.plugin.settings.openRouterAppTitle)
             .onChange(async (value) => {
               this.plugin.settings.openRouterAppTitle = value.trim();

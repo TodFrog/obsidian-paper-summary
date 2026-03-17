@@ -15,15 +15,15 @@ describe("pdf worker registration", () => {
     let actionWorkerState: unknown;
 
     const result = await withPdfJsWorkerHandler(
-      async () => {
+      () => {
         fakeGlobal.pdfjsWorker = {
           WorkerMessageHandler: importedHandler,
         };
-        return { WorkerMessageHandler: importedHandler };
+        return Promise.resolve({ WorkerMessageHandler: importedHandler });
       },
-      async () => {
+      () => {
         actionWorkerState = fakeGlobal.pdfjsWorker;
-        return "ok";
+        return Promise.resolve("ok");
       },
       fakeGlobal,
     );
@@ -42,9 +42,10 @@ describe("pdf worker registration", () => {
     } = {};
 
     await withPdfJsWorkerHandler(
-      async () => ({ WorkerMessageHandler: { name: "imported" } }),
-      async () => {
+      () => Promise.resolve({ WorkerMessageHandler: { name: "imported" } }),
+      () => {
         expect(fakeGlobal.pdfjsWorker?.WorkerMessageHandler).toEqual({ name: "imported" });
+        return Promise.resolve();
       },
       fakeGlobal,
     );

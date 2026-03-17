@@ -218,7 +218,7 @@ describe("paper note template rendering", () => {
 
     const baseVault = {
       getAbstractFileByPath: (path: string) => ({ path, extension: path.split(".").pop() }),
-      cachedRead: async () => "{{ title }}",
+      cachedRead: () => Promise.resolve("{{ title }}"),
     };
 
     await expect(
@@ -261,7 +261,7 @@ describe("paper note template rendering", () => {
       renderConfiguredPaperNote({
         vault: {
           getAbstractFileByPath: () => ({ path: "Templates/paper.md", extension: "md" }),
-          cachedRead: async () => "   ",
+          cachedRead: () => Promise.resolve("   "),
         } as never,
         settings: {
           templateMode: "custom",
@@ -281,9 +281,7 @@ describe("paper note template rendering", () => {
       renderConfiguredPaperNote({
         vault: {
           getAbstractFileByPath: () => ({ path: "Templates/paper.md", extension: "md" }),
-          cachedRead: async () => {
-            throw new Error("read failed");
-          },
+          cachedRead: () => Promise.reject(new Error("read failed")),
         } as never,
         settings: {
           templateMode: "custom",
@@ -303,7 +301,7 @@ describe("paper note template rendering", () => {
       renderConfiguredPaperNote({
         vault: {
           getAbstractFileByPath: () => ({ path: "Templates/paper.md", extension: "md" }),
-          cachedRead: async () => "{{ unsupported }}",
+          cachedRead: () => Promise.resolve("{{ unsupported }}"),
         } as never,
         settings: {
           templateMode: "custom",

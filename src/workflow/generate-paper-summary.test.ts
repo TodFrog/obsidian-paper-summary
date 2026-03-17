@@ -74,7 +74,7 @@ describe("generate paper summary", () => {
     });
     createOpenAiJsonCompletionClient.mockReturnValue({});
     suggestRelatedNoteLinks.mockResolvedValue([]);
-    createNoteInVault.mockImplementation(async (_vault, path: string, content: string) => ({
+    createNoteInVault.mockImplementation((_vault, path: string, content: string) => Promise.resolve({
       path,
       content,
     }));
@@ -83,13 +83,13 @@ describe("generate paper summary", () => {
 
     const app = {
       vault: {
-        readBinary: async () => new ArrayBuffer(8),
+        readBinary: () => Promise.resolve(new ArrayBuffer(8)),
         getMarkdownFiles: () => [],
       },
       metadataCache: {},
       workspace: {
         getLeaf: () => ({
-          openFile: async () => undefined,
+          openFile: () => Promise.resolve(undefined),
         }),
       },
     };
@@ -176,13 +176,13 @@ describe("generate paper summary", () => {
 
     const app = {
       vault: {
-        readBinary: async () => new ArrayBuffer(8),
+        readBinary: () => Promise.resolve(new ArrayBuffer(8)),
         getMarkdownFiles: () => [],
       },
       metadataCache: {},
       workspace: {
         getLeaf: () => ({
-          openFile: async () => undefined,
+          openFile: () => Promise.resolve(undefined),
         }),
       },
     };

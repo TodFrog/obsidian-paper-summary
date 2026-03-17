@@ -13,7 +13,7 @@ const extraction = {
 
 function createClient(response: string): JsonCompletionClient {
   return {
-    complete: async () => ({
+    complete: () => Promise.resolve({
       content: response,
     }),
   };
@@ -89,9 +89,7 @@ describe("paper analysis", () => {
     expect(prompts.systemPrompt).toContain("Write all summary prose fields in Japanese.");
 
     const client: JsonCompletionClient = {
-      complete: async () => {
-        throw new Error("should not call remote model");
-      },
+      complete: () => Promise.reject(new Error("should not call remote model")),
     };
 
     await expect(
@@ -266,9 +264,7 @@ Thanks!`);
 
   it("wraps client request failures with a stable Paper Summary error", async () => {
     const client: JsonCompletionClient = {
-      complete: async () => {
-        throw new Error("network down");
-      },
+      complete: () => Promise.reject(new Error("network down")),
     };
 
     await expect(
@@ -312,7 +308,7 @@ Thanks!`);
 
   it("surfaces truncated developer diagnostics without persisting full raw payloads by default", async () => {
     const client: JsonCompletionClient = {
-      complete: async () => ({
+      complete: () => Promise.resolve({
         content: `{"title":"Missing required fields"}`,
         extractedContent: `{"title":"Missing required fields","debug":"${"x".repeat(400)}"}`,
         rawResponse: {
@@ -363,8 +359,7 @@ Thanks!`);
 
   it("uses candidate fallbacks when message content is empty and includes ladder diagnostics", async () => {
     const client: JsonCompletionClient = {
-      complete: async () =>
-        ({
+      complete: () => Promise.resolve(({
           content: "",
           candidates: [
             {
@@ -376,7 +371,7 @@ Thanks!`);
             id: "response-456",
           },
           finishReason: "stop",
-        }) as never,
+        }) as never),
     };
 
     await expect(

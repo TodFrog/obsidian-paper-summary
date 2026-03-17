@@ -45,17 +45,17 @@ function builtInPaperNote(title: string, relatedLines: string[] = ["- [[Placehol
 
 describe("refresh related paper links", () => {
   it("rewrites only the built-in Related Notes block for built-in paper summaries", async () => {
-    const modify = vi.fn<(file: unknown, content: string) => Promise<void>>(async () => undefined);
+    const modify = vi.fn<(file: unknown, content: string) => Promise<void>>(() => Promise.resolve());
     const activeContent = builtInPaperNote("Attention Is All You Need", ["- [[Old Link]]"]);
 
     const app = {
       vault: {
-        cachedRead: async (file: { path: string }) => {
+        cachedRead: (file: { path: string }) => {
           if (file.path === "Papers/Summaries/Attention Is All You Need.md") {
-            return activeContent;
+            return Promise.resolve(activeContent);
           }
 
-          return builtInPaperNote("Sequence Modeling with Attention");
+          return Promise.resolve(builtInPaperNote("Sequence Modeling with Attention"));
         },
         getMarkdownFiles: () => [
           {
@@ -118,12 +118,12 @@ describe("refresh related paper links", () => {
 
   it("does nothing and emits a concise notice for non-built-in notes", async () => {
     const notices: string[] = [];
-    const modify = vi.fn<(file: unknown, content: string) => Promise<void>>(async () => undefined);
+    const modify = vi.fn<(file: unknown, content: string) => Promise<void>>(() => Promise.resolve());
 
     const result = await refreshRelatedPaperLinks({
       app: {
         vault: {
-          cachedRead: async () => "# Custom Summary\n\nThis note does not use the built-in paper-summary format.",
+          cachedRead: () => Promise.resolve("# Custom Summary\n\nThis note does not use the built-in paper-summary format."),
           getMarkdownFiles: () => [],
           modify,
         },

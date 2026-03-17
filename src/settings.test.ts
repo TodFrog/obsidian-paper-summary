@@ -115,4 +115,18 @@ describe("settings", () => {
       paperNotesScope: "Custom/Papers",
     });
   });
+
+  it("normalizes invalid enum-like saved settings back to safe defaults", () => {
+    expect(
+      mergeSettings({
+        structuredOutputMode: "yaml" as never,
+        outputLanguage: "japanese" as never,
+        templateMode: "external" as never,
+      }),
+    ).toMatchObject({
+      structuredOutputMode: "json_object",
+      outputLanguage: "english",
+      templateMode: "built_in",
+    });
+  });
 });

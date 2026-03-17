@@ -4,9 +4,10 @@ describe("note file creation", () => {
   it("creates a note when the target path does not already exist", async () => {
     const created: Array<{ path: string; content: string }> = [];
     const adapter: NoteFileAdapter = {
-      exists: async () => false,
-      create: async (path, content) => {
+      exists: () => Promise.resolve(false),
+      create: (path, content) => {
         created.push({ path, content });
+        return Promise.resolve();
       },
     };
 
@@ -24,11 +25,12 @@ describe("note file creation", () => {
   it("adds a numeric suffix when the target path already exists", async () => {
     const created: Array<{ path: string; content: string }> = [];
     const adapter: NoteFileAdapter = {
-      exists: async (path) => {
-        return path === "Papers/Summaries/Attention.md" || path === "Papers/Summaries/Attention (1).md";
-      },
-      create: async (path, content) => {
+      exists: (path) => Promise.resolve(
+        path === "Papers/Summaries/Attention.md" || path === "Papers/Summaries/Attention (1).md",
+      ),
+      create: (path, content) => {
         created.push({ path, content });
+        return Promise.resolve();
       },
     };
 
@@ -46,9 +48,10 @@ describe("note file creation", () => {
   it("adds a numeric suffix for root-level files too", async () => {
     const created: Array<{ path: string; content: string }> = [];
     const adapter: NoteFileAdapter = {
-      exists: async (path) => path === "Attention.md",
-      create: async (path, content) => {
+      exists: (path) => Promise.resolve(path === "Attention.md"),
+      create: (path, content) => {
         created.push({ path, content });
+        return Promise.resolve();
       },
     };
 

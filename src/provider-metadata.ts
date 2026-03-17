@@ -6,8 +6,6 @@ export type PaperSummaryProvider =
   | "ollama"
   | "others";
 
-type LegacyPaperSummaryProvider = PaperSummaryProvider | "custom";
-
 export interface ProviderMetadata {
   label: string;
   defaultBaseUrl: string;
@@ -84,18 +82,22 @@ export interface ProviderSettingsVisibility {
   showOpenRouterSettings: boolean;
 }
 
+function isPaperSummaryProvider(value: string): value is PaperSummaryProvider {
+  return value in PROVIDER_METADATA;
+}
+
 export function normalizeProvider(value: unknown): PaperSummaryProvider {
   if (typeof value !== "string") {
     return "openai";
   }
 
-  const normalized = value.trim().toLowerCase() as LegacyPaperSummaryProvider;
+  const normalized = value.trim().toLowerCase();
   if (normalized === "custom") {
     return "others";
   }
 
-  if (normalized in PROVIDER_METADATA) {
-    return normalized as PaperSummaryProvider;
+  if (isPaperSummaryProvider(normalized)) {
+    return normalized;
   }
 
   return "openai";
