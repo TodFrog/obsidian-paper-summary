@@ -122,7 +122,7 @@ export class PaperSummarySettingTab extends PluginSettingTab {
 
     new Setting(containerEl)
       .setName("Output language")
-      .setDesc("Controls generated summary prose. Automatic mode uses the paper's dominant language instead of the app language. Headings always stay in English.")
+      .setDesc("Controls generated summary prose. Automatic mode uses the paper's dominant language instead of the app language. Headings always stay in english.")
       .addDropdown((dropdown) =>
         dropdown
           .addOption("english", "English")
@@ -142,7 +142,7 @@ export class PaperSummarySettingTab extends PluginSettingTab {
 
     new Setting(containerEl)
       .setName("Custom output language")
-      .setDesc("Use this only when output language is set to custom. Automatic mode uses the paper's dominant language and falls back to English when unclear.")
+      .setDesc("Use this only when output language is set to custom. Automatic mode uses the paper's dominant language and falls back to english when unclear.")
       .addText((text) => {
         text
           .setPlaceholder("Japanese")
