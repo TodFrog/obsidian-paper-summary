@@ -33,8 +33,8 @@ export class PaperSummarySettingTab extends PluginSettingTab {
       .setDesc("Choose the provider used for paper analysis. Most providers use the shared compatible request path.")
       .addDropdown((dropdown) =>
         dropdown
-          .addOption("openai", "OpenAI")
-          .addOption("openrouter", "OpenRouter")
+          .addOption("openai", "Openai")
+          .addOption("openrouter", "Openrouter")
           .addOption("gemini", "Gemini")
           .addOption("claude", "Claude")
           .addOption("ollama", "Ollama")
@@ -127,7 +127,7 @@ export class PaperSummarySettingTab extends PluginSettingTab {
         dropdown
           .addOption("english", "English")
           .addOption("korean", "Korean")
-          .addOption("auto", "Auto (paper language)")
+          .addOption("auto", "Auto")
           .addOption("custom", "Custom")
           .setValue(this.plugin.settings.outputLanguage)
           .onChange(async (value) => {
@@ -142,7 +142,7 @@ export class PaperSummarySettingTab extends PluginSettingTab {
 
     new Setting(containerEl)
       .setName("Custom output language")
-      .setDesc("Use this only when output language is set to custom (for example, Japanese). Automatic mode uses the paper's dominant language and falls back to English when unclear.")
+      .setDesc("Use this only when output language is set to custom. Automatic mode uses the paper's dominant language and falls back to English when unclear.")
       .addText((text) => {
         text
           .setPlaceholder("Japanese")

@@ -35,8 +35,8 @@ describe("paper summary settings tab", () => {
     expect(findSetting("Provider").desc).toContain("Choose the provider used for paper analysis.");
     expect(findSetting("API key").desc).toBe("API key for remote summarization requests.");
     expect(Object.fromEntries(findSetting("Provider").dropdown?.options ?? [])).toEqual({
-      openai: "OpenAI",
-      openrouter: "OpenRouter",
+      openai: "Openai",
+      openrouter: "Openrouter",
       gemini: "Gemini",
       claude: "Claude",
       ollama: "Ollama",
@@ -45,7 +45,7 @@ describe("paper summary settings tab", () => {
     expect(findSetting("API key").text?.placeholder).toBe("Paste API key");
     expect(findSetting("Structured output mode").desc).toContain("some routed providers may ignore or reject it.");
     expect(findSetting("Output language").desc).toContain("instead of the app language");
-    expect(findSetting("Custom output language").desc).toContain("(for example, Japanese).");
+    expect(findSetting("Custom output language").desc).toContain("Automatic mode uses the paper's dominant language");
     expect(findSetting("Output folder").text?.placeholder).toBe("Example: papers/summaries");
     expect(getCreatedSettings().some((entry) => (entry.name ?? "").toLowerCase().includes("settings"))).toBe(false);
   });
