@@ -35,17 +35,17 @@ describe("paper summary settings tab", () => {
     expect(findSetting("Provider").desc).toContain("Choose the provider used for paper analysis.");
     expect(findSetting("API key").desc).toBe("API key for remote summarization requests.");
     expect(Object.fromEntries(findSetting("Provider").dropdown?.options ?? [])).toEqual({
-      openai: "openai",
-      openrouter: "openrouter",
-      gemini: "gemini",
-      claude: "claude",
-      ollama: "ollama",
-      others: "other",
+      openai: "OpenAI",
+      openrouter: "OpenRouter",
+      gemini: "Gemini",
+      claude: "Claude",
+      ollama: "Ollama",
+      others: "Other",
     });
     expect(findSetting("API key").text?.placeholder).toBe("Paste API key");
     expect(findSetting("Structured output mode").desc).toContain("some routed providers may ignore or reject it.");
     expect(findSetting("Output language").desc).toContain("instead of the app language");
-    expect(findSetting("Custom output language").desc).toContain("Example: Japanese.");
+    expect(findSetting("Custom output language").desc).toContain("(for example, Japanese).");
     expect(findSetting("Output folder").text?.placeholder).toBe("Example: papers/summaries");
     expect(getCreatedSettings().some((entry) => (entry.name ?? "").toLowerCase().includes("settings"))).toBe(false);
   });
@@ -62,11 +62,11 @@ describe("paper summary settings tab", () => {
     const tab = new PaperSummarySettingTab({} as never, plugin as never);
     tab.display();
 
-    expect(findSetting("Routing options")).toMatchObject({
+    expect(findSetting("Routing")).toMatchObject({
       heading: true,
     });
     expect(findSetting("Require parameters").desc).toContain("Prefer providers that honor structured-output parameters.");
-    expect(findSetting("App referer").desc).toBe("Optional HTTP-Referer header used for attribution.");
+    expect(findSetting("App referer").desc).toBe("Optional HTTP referer header used for attribution.");
     expect(findSetting("App title").desc).toBe("Optional X-Title header used for attribution.");
     expect(findSetting("Provider order").text?.placeholder).toBe("Example: openai, anthropic");
     expect(findSetting("Allow fallbacks").desc).toBe(

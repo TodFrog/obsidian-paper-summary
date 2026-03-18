@@ -33,12 +33,12 @@ export class PaperSummarySettingTab extends PluginSettingTab {
       .setDesc("Choose the provider used for paper analysis. Most providers use the shared compatible request path.")
       .addDropdown((dropdown) =>
         dropdown
-          .addOption("openai", "openai")
-          .addOption("openrouter", "openrouter")
-          .addOption("gemini", "gemini")
-          .addOption("claude", "claude")
-          .addOption("ollama", "ollama")
-          .addOption("others", "other")
+          .addOption("openai", "OpenAI")
+          .addOption("openrouter", "OpenRouter")
+          .addOption("gemini", "Gemini")
+          .addOption("claude", "Claude")
+          .addOption("ollama", "Ollama")
+          .addOption("others", "Other")
           .setValue(this.plugin.settings.provider)
           .onChange(async (value) => {
             const nextProvider = normalizeProvider(value);
@@ -122,7 +122,7 @@ export class PaperSummarySettingTab extends PluginSettingTab {
 
     new Setting(containerEl)
       .setName("Output language")
-      .setDesc("Controls generated summary prose. Automatic mode uses the paper's dominant language instead of the app language. Note headings stay in English.")
+      .setDesc("Controls generated summary prose. Automatic mode uses the paper's dominant language instead of the app language. Headings always stay in English.")
       .addDropdown((dropdown) =>
         dropdown
           .addOption("english", "English")
@@ -142,7 +142,7 @@ export class PaperSummarySettingTab extends PluginSettingTab {
 
     new Setting(containerEl)
       .setName("Custom output language")
-      .setDesc("Use this only when output language is set to custom. Example: Japanese. Automatic mode uses the paper's dominant language and falls back to English when unclear.")
+      .setDesc("Use this only when output language is set to custom (for example, Japanese). Automatic mode uses the paper's dominant language and falls back to English when unclear.")
       .addText((text) => {
         text
           .setPlaceholder("Japanese")
@@ -192,7 +192,7 @@ export class PaperSummarySettingTab extends PluginSettingTab {
 
     if (providerVisibility.showOpenRouterSettings) {
       new Setting(containerEl)
-        .setName("Routing options")
+        .setName("Routing")
         .setHeading();
 
       new Setting(containerEl)
@@ -207,7 +207,7 @@ export class PaperSummarySettingTab extends PluginSettingTab {
 
       new Setting(containerEl)
         .setName("App referer")
-        .setDesc("Optional HTTP-Referer header used for attribution.")
+        .setDesc("Optional HTTP referer header used for attribution.")
         .addText((text) =>
           text
             .setPlaceholder("https://example.com")
