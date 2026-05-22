@@ -35,6 +35,15 @@ export class TFile {
   }
 }
 
+export class TFolder {
+  path = "";
+  name = "";
+
+  constructor(init?: Partial<TFolder>) {
+    Object.assign(this, init);
+  }
+}
+
 export class MockContainerEl {
   classes = new Set<string>();
 

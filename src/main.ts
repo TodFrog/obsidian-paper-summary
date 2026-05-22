@@ -5,6 +5,10 @@ import { PaperSummarySettingTab } from "./settings-tab";
 import { generatePaperSummary } from "./workflow/generate-paper-summary";
 import { refreshRelatedPaperLinks } from "./workflow/refresh-related-paper-links";
 
+function isLoadedSettingsData(value: unknown): value is Partial<PaperSummarySettings> {
+  return typeof value === "object" && value !== null;
+}
+
 export default class PaperSummaryPlugin extends Plugin {
   settings: PaperSummarySettings = mergeSettings();
 
@@ -47,7 +51,8 @@ export default class PaperSummaryPlugin extends Plugin {
   }
 
   async loadSettings(): Promise<void> {
-    this.settings = mergeSettings(await this.loadData());
+    const loadedData: unknown = await this.loadData();
+    this.settings = mergeSettings(isLoadedSettingsData(loadedData) ? loadedData : null);
   }
 
   async saveSettings(): Promise<void> {

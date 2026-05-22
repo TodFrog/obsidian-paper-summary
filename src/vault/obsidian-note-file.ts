@@ -1,5 +1,9 @@
-import { TFile, Vault } from "obsidian";
+import { TFile, TFolder, Vault } from "obsidian";
 import { createNoteFile } from "./note-file";
+
+function folderExists(vault: Vault, path: string): boolean {
+  return vault.getAbstractFileByPath(path) instanceof TFolder;
+}
 
 async function ensureFolderExists(vault: Vault, notePath: string): Promise<void> {
   const parts = notePath.split("/").slice(0, -1);
@@ -7,7 +11,7 @@ async function ensureFolderExists(vault: Vault, notePath: string): Promise<void>
 
   for (const part of parts) {
     currentPath = currentPath ? `${currentPath}/${part}` : part;
-    if (!vault.getFolderByPath(currentPath)) {
+    if (!folderExists(vault, currentPath)) {
       await vault.createFolder(currentPath);
     }
   }
